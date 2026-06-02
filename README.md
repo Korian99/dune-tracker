@@ -43,7 +43,7 @@ git commit -m "Your message"
 git push origin main
 ```
 
-Then deploy from GitHub on [Render](https://render.com) (Blueprint → repo `Korian99/dune-tracker`). See **[docs/HOSTING.md](docs/HOSTING.md)** for step-by-step instructions, env vars, and troubleshooting.
+Then deploy from GitHub on [Render](https://render.com) + **[Neon](https://neon.tech)** for the database. Step-by-step: **[docs/NEON_SETUP.md](docs/NEON_SETUP.md)**. Overview: **[docs/HOSTING.md](docs/HOSTING.md)**.
 
 ## Project layout
 

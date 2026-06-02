@@ -106,6 +106,6 @@ python manage.py runserver
 ## Deployment
 
 - **GitHub** — source of truth: `https://github.com/Korian99/dune-tracker`
-- **Live app** — Render (Blueprint + `render.yaml`), not GitHub Pages
-- **Guide** — `docs/HOSTING.md` (push to GitHub, connect Render, env vars)
+- **Live app** — Render web + **Neon** Postgres (`DATABASE_URL`), not Render free DB
+- **Guide** — `docs/NEON_SETUP.md` (primary), `docs/HOSTING.md` (overview)
 - **CI** — `.github/workflows/ci.yml` on push/PR to `main`
