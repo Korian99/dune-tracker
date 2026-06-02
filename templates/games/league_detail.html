@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}{{ league.name }} — Dune Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Liga</p>
+    <h1>{{ league.name }}</h1>
+    {% if league.description %}<p class="lead">{{ league.description }}</p>{% endif %}
+  </div>
+  <div class="header-actions">
+    <a href="{% url 'games:league_edit' slug=league.slug %}" class="btn btn-ghost">Editar</a>
+    <a href="{% url 'games:create' %}?league={{ league.slug }}" class="btn btn-primary">Registrar partida</a>
+  </div>
+</div>
+
+{% if league.scoring_notes %}
+<section class="notes">
+  <h2>Reglas de puntuación</h2>
+  <p>{{ league.scoring_notes|linebreaksbr }}</p>
+</section>
+{% else %}
+<p class="help">Aún no hay reglas de puntuación. Edita la liga para añadirlas.</p>
+{% endif %}
+
+{% if standings %}
+<section class="section">
+  <h2>Clasificación</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Jugador</th>
+        <th>Pts. liga</th>
+        <th>Victorias</th>
+        <th>Partidas</th>
+        <th>PV med.</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in standings %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td><strong>{{ row.player_name }}</strong></td>
+        <td>{{ row.league_points }}</td>
+        <td>{{ row.wins }}</td>
+        <td>{{ row.games }}</td>
+        <td>{{ row.avg_vp }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<section class="section">
+  <h2>Partidas de la liga</h2>
+  {% if games %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Rondas</th>
+        <th>Duración</th>
+        <th>Ganador</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for game in games %}
+      <tr>
+        <td>{{ game.played_on }}</td>
+        <td>{{ game.rounds|default:"—" }}</td>
+        <td>{{ game.formatted_duration|default:"—" }}</td>
+        <td>
+          {% with w=game.winner %}
+            {% if w %}{{ w.player_name }} ({{ w.victory_points }} PV){% else %}—{% endif %}
+          {% endwith %}
+        </td>
+        <td><a href="{% url 'games:detail' pk=game.pk %}">Detalle</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">Esta liga aún no tiene partidas.</p>
+  {% endif %}
+</section>
+
+<p>
+  <a href="{% url 'games:stats' %}?league={{ league.slug }}">Estadísticas completas →</a>
+  · <a href="{% url 'games:league_list' %}">Todas las ligas</a>
+</p>
+{% endblock %}

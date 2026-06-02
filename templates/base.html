@@ -1,0 +1,42 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dune Tracker{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="{% url 'games:home' %}" class="logo">
+        <span class="logo-mark">◆</span>
+        Dune Tracker
+      </a>
+      <nav class="nav">
+        <a href="{% url 'games:home' %}">Inicio</a>
+        <a href="{% url 'games:list' %}">Partidas</a>
+        <a href="{% url 'games:league_list' %}">Ligas</a>
+        <a href="{% url 'games:stats' %}">Estadísticas</a>
+        <a href="{% url 'games:create' %}" class="btn btn-primary">Registrar partida</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% if messages %}
+      {% for message in messages %}
+        <p class="flash flash-{{ message.tags }}">{{ message }}</p>
+      {% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>Registra tus partidas de <em>Dune: Imperium — Uprising</em> y <em>Bloodlines</em></p>
+    </div>
+  </footer>
+</body>
+</html>

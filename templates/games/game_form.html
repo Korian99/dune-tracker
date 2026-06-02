@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Editar{% else %}Registrar{% endif %} partida — Dune Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{% if is_edit %}Editar partida{% else %}Registrar partida{% endif %}</h1>
+</div>
+
+<form method="post" class="game-form">
+  {% csrf_token %}
+  <datalist id="leader-suggestions">
+    {% for leader in leader_suggestions %}
+      <option value="{{ leader }}">
+    {% endfor %}
+  </datalist>
+
+  <fieldset class="form-section">
+    <legend>Sesión</legend>
+    {% for field in form %}
+      {% if field.name != "duration_hours" and field.name != "duration_minutes_part" %}
+      <div class="field {% if field.errors %}field-error{% endif %}">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+        {{ field.errors }}
+      </div>
+      {% endif %}
+    {% endfor %}
+    <div class="field-row duration-row">
+      <div class="field">
+        {{ form.duration_hours.label_tag }}
+        {{ form.duration_hours }}
+        {{ form.duration_hours.errors }}
+      </div>
+      <div class="field">
+        {{ form.duration_minutes_part.label_tag }}
+        {{ form.duration_minutes_part }}
+        {{ form.duration_minutes_part.errors }}
+      </div>
+    </div>
+    <p class="help">Rondas y duración son opcionales, pero útiles para las estadísticas.</p>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend>Jugadores y resultados</legend>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+      <div class="form-errors">{{ formset.non_form_errors }}</div>
+    {% endif %}
+    <div class="result-rows">
+      {% for result_form in formset %}
+        <div class="result-row">
+          {% for hidden in result_form.hidden_fields %}{{ hidden }}{% endfor %}
+          <div class="field">
+            {{ result_form.player_name.label_tag }}
+            {{ result_form.player_name }}
+            {{ result_form.player_name.errors }}
+          </div>
+          <div class="field">
+            {{ result_form.leader.label_tag }}
+            {{ result_form.leader }}
+            {{ result_form.leader.errors }}
+          </div>
+          <div class="field field-vp">
+            {{ result_form.victory_points.label_tag }}
+            {{ result_form.victory_points }}
+            {{ result_form.victory_points.errors }}
+          </div>
+          <div class="field field-sard">
+            {{ result_form.sardaukar_count.label_tag }}
+            {{ result_form.sardaukar_count }}
+            {{ result_form.sardaukar_count.errors }}
+          </div>
+          <div class="field field-alliances">
+            <span class="field-label">Alianzas</span>
+            <div class="alliance-checks">
+              <label>{{ result_form.alliance_emperor }} Emperador</label>
+              <label>{{ result_form.alliance_guild }} Gremio</label>
+              <label>{{ result_form.alliance_bene_gesserit }} BG</label>
+              <label>{{ result_form.alliance_fremen }} Fremen</label>
+            </div>
+          </div>
+          {% if result_form.DELETE %}
+            <div class="field field-delete">
+              <label>{{ result_form.DELETE }} Quitar</label>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    <p class="help">Mínimo dos jugadores. Cada alianza de facción solo puede asignarse a un jugador.</p>
+  </fieldset>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Guardar partida</button>
+    <a href="{% if is_edit %}{% url 'games:detail' pk=game.pk %}{% else %}{% url 'games:home' %}{% endif %}" class="btn btn-ghost">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

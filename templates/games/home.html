@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio — Dune Tracker{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">Arrakis te espera</p>
+  <h1>Registra tus partidas de Imperium</h1>
+  <p class="lead">
+    Anota sesiones de Uprising y Bloodlines: rondas, duración, líderes, alianzas,
+    Sardaukar y clasificaciones por liga.
+  </p>
+  <div class="hero-actions">
+    <a href="{% url 'games:create' %}" class="btn btn-primary btn-lg">Nueva partida</a>
+    <a href="{% url 'games:league_list' %}" class="btn btn-ghost btn-lg">Ligas</a>
+  </div>
+  {% if total_games %}
+    <p class="meta">
+      {{ total_games }}
+      {% if total_games == 1 %}partida registrada{% else %}partidas registradas{% endif %}
+    </p>
+  {% endif %}
+</section>
+
+{% if leagues %}
+<section class="section">
+  <h2>Tus ligas</h2>
+  <div class="card-grid">
+    {% for league in leagues %}
+    <a href="{% url 'games:league_detail' slug=league.slug %}" class="card card-link">
+      <h3 class="card-title">{{ league.name }}</h3>
+      <p class="meta">
+        {{ league.game_count }}
+        {% if league.game_count == 1 %}partida{% else %}partidas{% endif %}
+      </p>
+    </a>
+    {% endfor %}
+  </div>
+  <p class="section-footer"><a href="{% url 'games:league_list' %}">Gestionar ligas →</a></p>
+</section>
+{% endif %}
+
+{% if recent_games %}
+<section class="section">
+  <h2>Partidas recientes</h2>
+  <div class="card-grid">
+    {% for game in recent_games %}
+      <a href="{% url 'games:detail' pk=game.pk %}" class="card card-link">
+        <div class="card-top">
+          <time>{{ game.played_on }}</time>
+          {% if game.league %}<span class="tag">{{ game.league.name }}</span>{% endif %}
+          {% if game.bloodlines %}<span class="tag">Bloodlines</span>{% endif %}
+        </div>
+        <p class="card-title">
+          {{ game.get_player_count_display }}
+          {% if game.rounds %} · {{ game.rounds }} rondas{% endif %}
+          {% if game.formatted_duration %} · {{ game.formatted_duration }}{% endif %}
+        </p>
+        {% with winner=game.winner %}
+          {% if winner %}
+            <p class="card-winner">{{ winner.player_name }} · {{ winner.victory_points }} PV</p>
+          {% endif %}
+        {% endwith %}
+      </a>
+    {% endfor %}
+  </div>
+  <p class="section-footer"><a href="{% url 'games:list' %}">Ver todas las partidas →</a></p>
+</section>
+{% else %}
+<section class="empty-state">
+  <h2>Aún no hay partidas</h2>
+  <p>Registra tu primera partida o <a href="{% url 'games:league_create' %}">crea una liga</a> para tu grupo.</p>
+</section>
+{% endif %}
+{% endblock %}

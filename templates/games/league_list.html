@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Ligas — Dune Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Ligas</h1>
+  <a href="{% url 'games:league_create' %}" class="btn btn-primary">Nueva liga</a>
+</div>
+
+<p class="lead">Agrupa partidas con reglas comunes. Escribe el sistema de puntos en cada liga para llevar la clasificación.</p>
+
+{% if leagues %}
+<div class="card-grid">
+  {% for league in leagues %}
+  <a href="{% url 'games:league_detail' slug=league.slug %}" class="card card-link">
+    <h3 class="card-title">{{ league.name }}</h3>
+    <p class="meta">
+      {{ league.game_count }}
+      {% if league.game_count == 1 %}partida{% else %}partidas{% endif %}
+    </p>
+    {% if league.scoring_notes %}
+      <p class="card-snippet">{{ league.scoring_notes|truncatewords:20 }}</p>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">No hay ligas. <a href="{% url 'games:league_create' %}">Crea una</a> para tu grupo.</p>
+{% endif %}
+{% endblock %}

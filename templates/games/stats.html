@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Estadísticas — Dune Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Estadísticas{% if current_league %} — {{ current_league.name }}{% endif %}</h1>
+</div>
+
+<div class="filter-bar">
+  <span>Ámbito:</span>
+  <a href="{% url 'games:stats' %}" class="{% if not current_league %}active{% endif %}">Todas las partidas</a>
+  {% for league in leagues %}
+    <a href="{% url 'games:stats' %}?league={{ league.slug }}"
+       class="{% if current_league and current_league.slug == league.slug %}active{% endif %}">{{ league.name }}</a>
+  {% endfor %}
+</div>
+
+<div class="stat-cards">
+  <div class="stat-card">
+    <span class="stat-value">{{ summary.total|default:0 }}</span>
+    <span class="stat-label">Partidas</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-value">{{ summary.with_bloodlines|default:0 }}</span>
+    <span class="stat-label">Con Bloodlines</span>
+  </div>
+  {% if summary.avg_rounds %}
+  <div class="stat-card">
+    <span class="stat-value">{{ summary.avg_rounds|floatformat:1 }}</span>
+    <span class="stat-label">Media de rondas</span>
+  </div>
+  {% endif %}
+  {% if summary.avg_duration %}
+  <div class="stat-card">
+    <span class="stat-value">{{ summary.avg_duration|floatformat:0 }} min</span>
+    <span class="stat-label">Duración media</span>
+  </div>
+  {% endif %}
+</div>
+
+{% if current_league and league_standings %}
+<section class="section">
+  <h2>Clasificación de la liga</h2>
+  {% if current_league.scoring_notes %}
+    <p class="scoring-notes">{{ current_league.scoring_notes|linebreaksbr }}</p>
+  {% else %}
+    <p class="help">Puntuación provisional (3/2/1 por puesto) hasta que definas las reglas en la liga.</p>
+  {% endif %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Jugador</th>
+        <th>Pts. liga</th>
+        <th>Victorias</th>
+        <th>Partidas</th>
+        <th>PV med.</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in league_standings %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td><strong>{{ row.player_name }}</strong></td>
+        <td>{{ row.league_points }}</td>
+        <td>{{ row.wins }}</td>
+        <td>{{ row.games }}</td>
+        <td>{{ row.avg_vp }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if standings %}
+<h2>Ranking de jugadores</h2>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Jugador</th>
+      <th>Victorias</th>
+      <th>Partidas</th>
+      <th>% victorias</th>
+      <th>PV med.</th>
+      <th>Sardaukar med.</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in standings %}
+    <tr>
+      <td><strong>{{ row.name }}</strong></td>
+      <td>{{ row.wins }}</td>
+      <td>{{ row.games }}</td>
+      <td>{{ row.win_rate }}%</td>
+      <td>{{ row.avg_vp }}</td>
+      <td>{{ row.avg_sardaukar }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if leader_usage %}
+<h2>Líderes jugados</h2>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Líder</th>
+      <th>Veces</th>
+      <th>PV med.</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in leader_usage %}
+    <tr>
+      <td>{{ row.leader }}</td>
+      <td>{{ row.times_played }}</td>
+      <td>{{ row.avg_vp|floatformat:1 }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if not standings %}
+<p class="empty">Juega algunas partidas para ver estadísticas aquí.</p>
+{% endif %}
+{% endblock %}

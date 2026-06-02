@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Partida {{ game.played_on }} — Dune Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">
+      {{ game.get_base_game_display }}
+      {% if game.league %} · <a href="{% url 'games:league_detail' slug=game.league.slug %}">{{ game.league.name }}</a>{% endif %}
+    </p>
+    <h1>{{ game.played_on }}</h1>
+    <p class="meta">
+      {{ game.get_player_count_display }}
+      {% if game.bloodlines %} · Bloodlines{% endif %}
+      {% if game.rounds %} · {{ game.rounds }} rondas{% endif %}
+      {% if game.formatted_duration %} · {{ game.formatted_duration }}{% endif %}
+    </p>
+  </div>
+  <div class="header-actions">
+    <a href="{% url 'games:edit' pk=game.pk %}" class="btn btn-ghost">Editar</a>
+    <form method="post" action="{% url 'games:delete' pk=game.pk %}" class="inline-form"
+          onsubmit="return confirm('¿Eliminar esta partida?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Eliminar</button>
+    </form>
+  </div>
+</div>
+
+{% if alliance_map %}
+<section class="alliance-summary">
+  <h2>Alianzas</h2>
+  <dl class="alliance-dl">
+    {% for faction, player in alliance_map.items %}
+      <dt>{{ faction }}</dt>
+      <dd>{{ player }}</dd>
+    {% endfor %}
+  </dl>
+</section>
+{% endif %}
+
+<table class="data-table results-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Jugador</th>
+      <th>Líder</th>
+      <th>PV</th>
+      <th>Sardaukar</th>
+      <th>Alianzas</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for result in game.results.all %}
+    <tr class="{% if result.is_winner %}row-winner{% endif %}">
+      <td>{{ result.placement }}</td>
+      <td>{{ result.player_name }}{% if result.is_winner %} <span class="tag">Ganador</span>{% endif %}</td>
+      <td>{{ result.leader|default:"—" }}</td>
+      <td><strong>{{ result.victory_points }}</strong></td>
+      <td>{{ result.sardaukar_count }}</td>
+      <td>{% if result.alliances_held %}{{ result.alliances_held|join:", " }}{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if game.notes %}
+<section class="notes">
+  <h2>Notas</h2>
+  <p>{{ game.notes|linebreaksbr }}</p>
+</section>
+{% endif %}
+
+<p><a href="{% url 'games:list' %}">← Volver a partidas</a></p>
+{% endblock %}
