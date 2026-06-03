@@ -39,30 +39,41 @@
 </section>
 {% endif %}
 
-<table class="data-table results-table">
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>Jugador</th>
-      <th>Líder</th>
+<div class="table-wrap">
+  <table class="data-table data-table--cards results-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Jugador</th>
+        <th>Líder</th>
       <th>PV</th>
+      {% if league_score_rows %}<th>Pts. liga</th><th>Desglose</th>{% endif %}
       <th>Sardaukar</th>
       <th>Alianzas</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for result in game.results.all %}
-    <tr class="{% if result.is_winner %}row-winner{% endif %}">
-      <td>{{ result.placement }}</td>
-      <td>{{ result.player_name }}{% if result.is_winner %} <span class="tag">Ganador</span>{% endif %}</td>
-      <td>{{ result.leader|default:"—" }}</td>
-      <td><strong>{{ result.victory_points }}</strong></td>
-      <td>{{ result.sardaukar_count }}</td>
-      <td>{% if result.alliances_held %}{{ result.alliances_held|join:", " }}{% else %}—{% endif %}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+      </tr>
+    </thead>
+    <tbody>
+      {% for result in game.results.all %}
+      <tr class="{% if result.is_winner %}row-winner{% endif %}">
+        <td data-label="#">{{ result.placement }}</td>
+        <td data-label="Jugador">{{ result.player_name }}{% if result.is_winner %} <span class="tag">Ganador</span>{% endif %}</td>
+        <td data-label="Líder">{{ result.leader|default:"—" }}</td>
+        <td data-label="PV"><strong>{{ result.victory_points }}</strong></td>
+        {% if league_score_rows %}
+          {% for row in league_score_rows %}
+            {% if row.result.pk == result.pk %}
+        <td data-label="Pts. liga"><strong>{{ row.total|floatformat:"-1" }}</strong></td>
+        <td data-label="Desglose" class="meta formula">{{ row.formula }}</td>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        <td data-label="Sardaukar">{{ result.sardaukar_count }}</td>
+        <td data-label="Alianzas">{% if result.alliances_held %}{{ result.alliances_held|join:", " }}{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
 {% if game.notes %}
 <section class="notes">

@@ -21,68 +21,78 @@
   <p>{{ league.scoring_notes|linebreaksbr }}</p>
 </section>
 {% else %}
-<p class="help">Aún no hay reglas de puntuación. Edita la liga para añadirlas.</p>
+<p class="help">Puntos: puesto (5/3/2/1), victoria antes de ronda 7 (+1), umbrales 10/12/15 PV (+1 c/u). Edita la liga para personalizar el texto.</p>
 {% endif %}
 
 {% if standings %}
 <section class="section">
   <h2>Clasificación</h2>
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Jugador</th>
+  <div class="table-wrap">
+    <table class="data-table data-table--cards">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Jugador</th>
         <th>Pts. liga</th>
+        <th>Bonos</th>
         <th>Victorias</th>
-        <th>Partidas</th>
-        <th>PV med.</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in standings %}
-      <tr>
-        <td>{{ forloop.counter }}</td>
-        <td><strong>{{ row.player_name }}</strong></td>
-        <td>{{ row.league_points }}</td>
-        <td>{{ row.wins }}</td>
-        <td>{{ row.games }}</td>
-        <td>{{ row.avg_vp }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+          <th>Partidas</th>
+          <th>PV med.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in standings %}
+        <tr>
+          <td data-label="#">{{ forloop.counter }}</td>
+          <td data-label="Jugador"><strong>{{ row.player_name }}</strong></td>
+          <td data-label="Pts. liga">{{ row.league_points }}</td>
+          <td data-label="Bonos" class="meta">
+            {% if row.early_wins %}<span title="Victorias tempranas">⚡{{ row.early_wins }}</span>{% endif %}
+            {% if row.vp_bonuses %}<span title="Bonos por PV">★{{ row.vp_bonuses }}</span>{% endif %}
+            {% if not row.early_wins and not row.vp_bonuses %}—{% endif %}
+          </td>
+          <td data-label="Victorias">{{ row.wins }}</td>
+          <td data-label="Partidas">{{ row.games }}</td>
+          <td data-label="PV med.">{{ row.avg_vp }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 {% endif %}
 
 <section class="section">
   <h2>Partidas de la liga</h2>
   {% if games %}
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>Fecha</th>
-        <th>Rondas</th>
-        <th>Duración</th>
-        <th>Ganador</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for game in games %}
-      <tr>
-        <td>{{ game.played_on }}</td>
-        <td>{{ game.rounds|default:"—" }}</td>
-        <td>{{ game.formatted_duration|default:"—" }}</td>
-        <td>
-          {% with w=game.winner %}
-            {% if w %}{{ w.player_name }} ({{ w.victory_points }} PV){% else %}—{% endif %}
-          {% endwith %}
-        </td>
-        <td><a href="{% url 'games:detail' pk=game.pk %}">Detalle</a></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-wrap">
+    <table class="data-table data-table--cards">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Rondas</th>
+          <th>Duración</th>
+          <th>Ganador</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for game in games %}
+        <tr>
+          <td data-label="Fecha">{{ game.played_on }}</td>
+          <td data-label="Rondas">{{ game.rounds|default:"—" }}</td>
+          <td data-label="Duración">{{ game.formatted_duration|default:"—" }}</td>
+          <td data-label="Ganador">
+            {% with w=game.winner %}
+              {% if w %}{{ w.player_name }} ({{ w.victory_points }} PV){% else %}—{% endif %}
+            {% endwith %}
+          </td>
+          <td data-label=""><a href="{% url 'games:detail' pk=game.pk %}">Detalle</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
   <p class="empty">Esta liga aún no tiene partidas.</p>
   {% endif %}

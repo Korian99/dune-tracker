@@ -45,83 +45,95 @@
   {% if current_league.scoring_notes %}
     <p class="scoring-notes">{{ current_league.scoring_notes|linebreaksbr }}</p>
   {% else %}
-    <p class="help">Puntuación provisional (3/2/1 por puesto) hasta que definas las reglas en la liga.</p>
+    <p class="help">Puntos: puesto (5/3/2/1), victoria antes de ronda 7 (+1), umbrales 10/12/15 PV (+1 c/u).</p>
   {% endif %}
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Jugador</th>
-        <th>Pts. liga</th>
-        <th>Victorias</th>
-        <th>Partidas</th>
-        <th>PV med.</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in league_standings %}
-      <tr>
-        <td>{{ forloop.counter }}</td>
-        <td><strong>{{ row.player_name }}</strong></td>
-        <td>{{ row.league_points }}</td>
-        <td>{{ row.wins }}</td>
-        <td>{{ row.games }}</td>
-        <td>{{ row.avg_vp }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-wrap">
+    <table class="data-table data-table--cards">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Jugador</th>
+          <th>Pts. liga</th>
+          <th>Bonos</th>
+          <th>Victorias</th>
+          <th>Partidas</th>
+          <th>PV med.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in league_standings %}
+        <tr>
+          <td data-label="#">{{ forloop.counter }}</td>
+          <td data-label="Jugador"><strong>{{ row.player_name }}</strong></td>
+          <td data-label="Pts. liga">{{ row.league_points }}</td>
+          <td data-label="Bonos" class="meta">
+            {% if row.early_wins %}<span title="Victorias tempranas">⚡{{ row.early_wins }}</span>{% endif %}
+            {% if row.vp_bonuses %}<span title="Bonos por PV">★{{ row.vp_bonuses }}</span>{% endif %}
+            {% if not row.early_wins and not row.vp_bonuses %}—{% endif %}
+          </td>
+          <td data-label="Victorias">{{ row.wins }}</td>
+          <td data-label="Partidas">{{ row.games }}</td>
+          <td data-label="PV med.">{{ row.avg_vp }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 {% endif %}
 
 {% if standings %}
 <h2>Ranking de jugadores</h2>
-<table class="data-table">
-  <thead>
-    <tr>
-      <th>Jugador</th>
-      <th>Victorias</th>
-      <th>Partidas</th>
-      <th>% victorias</th>
-      <th>PV med.</th>
-      <th>Sardaukar med.</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in standings %}
-    <tr>
-      <td><strong>{{ row.name }}</strong></td>
-      <td>{{ row.wins }}</td>
-      <td>{{ row.games }}</td>
-      <td>{{ row.win_rate }}%</td>
-      <td>{{ row.avg_vp }}</td>
-      <td>{{ row.avg_sardaukar }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="table-wrap">
+  <table class="data-table data-table--cards">
+    <thead>
+      <tr>
+        <th>Jugador</th>
+        <th>Victorias</th>
+        <th>Partidas</th>
+        <th>% victorias</th>
+        <th>PV med.</th>
+        <th>Sardaukar med.</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in standings %}
+      <tr>
+        <td data-label="Jugador"><strong>{{ row.name }}</strong></td>
+        <td data-label="Victorias">{{ row.wins }}</td>
+        <td data-label="Partidas">{{ row.games }}</td>
+        <td data-label="% victorias">{{ row.win_rate }}%</td>
+        <td data-label="PV med.">{{ row.avg_vp }}</td>
+        <td data-label="Sardaukar med.">{{ row.avg_sardaukar }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endif %}
 
 {% if leader_usage %}
 <h2>Líderes jugados</h2>
-<table class="data-table">
-  <thead>
-    <tr>
-      <th>Líder</th>
-      <th>Veces</th>
-      <th>PV med.</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in leader_usage %}
-    <tr>
-      <td>{{ row.leader }}</td>
-      <td>{{ row.times_played }}</td>
-      <td>{{ row.avg_vp|floatformat:1 }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="table-wrap">
+  <table class="data-table data-table--cards">
+    <thead>
+      <tr>
+        <th>Líder</th>
+        <th>Veces</th>
+        <th>PV med.</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in leader_usage %}
+      <tr>
+        <td data-label="Líder">{{ row.leader }}</td>
+        <td data-label="Veces">{{ row.times_played }}</td>
+        <td data-label="PV med.">{{ row.avg_vp|floatformat:1 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endif %}
 
 {% if not standings %}

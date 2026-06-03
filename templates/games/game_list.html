@@ -18,39 +18,41 @@
 </div>
 
 {% if games %}
-<table class="data-table">
-  <thead>
-    <tr>
-      <th>Fecha</th>
-      <th>Liga</th>
-      <th>Edición</th>
-      <th>Rondas</th>
-      <th>Duración</th>
-      <th>Ganador</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for game in games %}
-    <tr>
-      <td>{{ game.played_on }}</td>
-      <td>{% if game.league %}{{ game.league.name }}{% else %}—{% endif %}</td>
-      <td>
-        {{ game.get_base_game_display }}
-        {% if game.bloodlines %}<span class="tag tag-sm">BL</span>{% endif %}
-      </td>
-      <td>{{ game.rounds|default:"—" }}</td>
-      <td>{{ game.formatted_duration|default:"—" }}</td>
-      <td>
-        {% with w=game.winner %}
-          {% if w %}{{ w.player_name }} ({{ w.victory_points }} PV){% else %}—{% endif %}
-        {% endwith %}
-      </td>
-      <td><a href="{% url 'games:detail' pk=game.pk %}">Detalle</a></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="table-wrap">
+  <table class="data-table data-table--cards">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Liga</th>
+        <th>Edición</th>
+        <th>Rondas</th>
+        <th>Duración</th>
+        <th>Ganador</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for game in games %}
+      <tr>
+        <td data-label="Fecha">{{ game.played_on }}</td>
+        <td data-label="Liga">{% if game.league %}{{ game.league.name }}{% else %}—{% endif %}</td>
+        <td data-label="Edición">
+          {{ game.get_base_game_display }}
+          {% if game.bloodlines %}<span class="tag tag-sm">BL</span>{% endif %}
+        </td>
+        <td data-label="Rondas">{{ game.rounds|default:"—" }}</td>
+        <td data-label="Duración">{{ game.formatted_duration|default:"—" }}</td>
+        <td data-label="Ganador">
+          {% with w=game.winner %}
+            {% if w %}{{ w.player_name }} ({{ w.victory_points }} PV){% else %}—{% endif %}
+          {% endwith %}
+        </td>
+        <td data-label=""><a href="{% url 'games:detail' pk=game.pk %}">Detalle</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% else %}
 <p class="empty">No hay partidas. <a href="{% url 'games:create' %}">Registra la primera</a>.</p>
 {% endif %}

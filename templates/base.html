@@ -14,12 +14,18 @@
         <span class="logo-mark">◆</span>
         Dune Tracker
       </a>
-      <nav class="nav">
+      <input type="checkbox" id="nav-toggle" class="nav-toggle-input" aria-hidden="true" tabindex="-1">
+      <label for="nav-toggle" class="nav-toggle" aria-label="Abrir menú de navegación">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </label>
+      <nav id="site-nav" class="nav" aria-label="Principal">
         <a href="{% url 'games:home' %}">Inicio</a>
         <a href="{% url 'games:list' %}">Partidas</a>
         <a href="{% url 'games:league_list' %}">Ligas</a>
         <a href="{% url 'games:stats' %}">Estadísticas</a>
-        <a href="{% url 'games:create' %}" class="btn btn-primary">Registrar partida</a>
+        <a href="{% url 'games:create' %}" class="btn btn-primary nav-cta">Registrar partida</a>
       </nav>
     </div>
   </header>
