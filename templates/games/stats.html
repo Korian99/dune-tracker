@@ -85,6 +85,10 @@
           <th>{% if count_games %}Mejor {{ count_games }}{% else %}Puntos{% endif %}</th>
           <th>% Victorias</th>
           <th>Puntos prom.</th>
+          <th>1.º</th>
+          <th>2.º</th>
+          <th>3.º</th>
+          <th>4.º</th>
         </tr>
       </thead>
       <tbody>
@@ -101,6 +105,10 @@
           <td data-label="Puntos"><strong>{{ row.score_best_n }}</strong></td>
           <td data-label="% Victorias">{{ row.win_rate }}%</td>
           <td data-label="Puntos prom.">{{ row.score_average }}</td>
+          <td data-label="1.º">{{ row.placement_1 }}</td>
+          <td data-label="2.º">{{ row.placement_2 }}</td>
+          <td data-label="3.º">{{ row.placement_3 }}</td>
+          <td data-label="4.º">{{ row.placement_4 }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -120,6 +128,10 @@
           <th>Partidas</th>
           <th>% Victorias</th>
           <th>Puesto habitual</th>
+          <th>1.º</th>
+          <th>2.º</th>
+          <th>3.º</th>
+          <th>4.º</th>
           <th>PV med.</th>
         </tr>
       </thead>
@@ -132,6 +144,10 @@
           <td data-label="Partidas">{{ row.games }}</td>
           <td data-label="% Victorias">{{ row.win_rate }}%</td>
           <td data-label="Puesto habitual">{{ row.usual_placement }} <span class="meta">({{ row.avg_placement }})</span></td>
+          <td data-label="1.º">{{ row.placement_1 }}</td>
+          <td data-label="2.º">{{ row.placement_2 }}</td>
+          <td data-label="3.º">{{ row.placement_3 }}</td>
+          <td data-label="4.º">{{ row.placement_4 }}</td>
           <td data-label="PV med.">{{ row.avg_vp }}</td>
         </tr>
         {% endfor %}

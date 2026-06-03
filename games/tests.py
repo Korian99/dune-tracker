@@ -457,6 +457,53 @@ class LeagueGamesSortTests(TestCase):
         ids_old = [e["game"].pk for e in oldest.context["game_entries"]]
         self.assertEqual(ids_old, [old.pk, new.pk])
 
+    def test_league_fecha_numbers_fixed_across_sort(self):
+        league = League.objects.create(name="Fecha Liga", slug="fecha-liga")
+        old = Game.objects.create(
+            league=league, played_on=date(2024, 1, 1), player_count=2
+        )
+        new = Game.objects.create(
+            league=league, played_on=date(2025, 6, 1), player_count=2
+        )
+        client = Client()
+        url = reverse("games:league_detail", kwargs={"slug": league.slug})
+
+        newest = client.get(url)
+        fechas_newest = {e["game"].pk: e["fecha_number"] for e in newest.context["game_entries"]}
+        self.assertEqual(fechas_newest[old.pk], 1)
+        self.assertEqual(fechas_newest[new.pk], 2)
+
+        oldest = client.get(url, {"sort": "oldest"})
+        fechas_oldest = {e["game"].pk: e["fecha_number"] for e in oldest.context["game_entries"]}
+        self.assertEqual(fechas_oldest, fechas_newest)
+
+    def test_league_detail_shows_fecha_title_and_extras(self):
+        league = League.objects.create(name="Extras Liga", slug="extras-liga")
+        game = Game.objects.create(
+            league=league, played_on=date.today(), player_count=2
+        )
+        p1 = resolve_player("Kori", league=league)
+        p2 = resolve_player("Alex", league=league)
+        GameResult.objects.create(
+            game=game,
+            player=p1,
+            victory_points=10,
+            sardaukar_count=2,
+            alliance_emperor=True,
+            order=0,
+        )
+        GameResult.objects.create(
+            game=game, player=p2, victory_points=5, order=1
+        )
+        response = Client().get(
+            reverse("games:league_detail", kwargs={"slug": league.slug})
+        )
+        self.assertContains(response, "Fecha N°1")
+        self.assertContains(response, "2 Sardaukars")
+        self.assertContains(response, "Alianzas:")
+        self.assertContains(response, "Emperador")
+        self.assertNotContains(response, 'class="league-game-card__date"')
+
 
 @override_settings(STORAGES=STORAGES_OVERRIDE)
 class LeagueRosterEditTests(TestCase):

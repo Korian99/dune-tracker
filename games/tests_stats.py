@@ -74,3 +74,39 @@ class StatsQueriesTests(TestCase):
 
     def test_scope_label_all(self):
         self.assertEqual(filter_scope_label([], False), "Todas las partidas")
+
+    def test_player_stats_placement_counts(self):
+        g1 = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g1, player=self.player_a, victory_points=10, order=0
+        )
+        GameResult.objects.create(
+            game=g1, player=self.player_b, victory_points=5, order=1
+        )
+        g2 = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g2, player=self.player_a, victory_points=5, order=0
+        )
+        GameResult.objects.create(
+            game=g2, player=self.player_b, victory_points=10, order=1
+        )
+        results = GameResult.objects.filter(game__league=self.league)
+        rows = {r["name"]: r for r in aggregate_player_stats(results)}
+        self.assertEqual(rows["Ana"]["placement_1"], 1)
+        self.assertEqual(rows["Ana"]["placement_2"], 1)
+        self.assertEqual(rows["Bob"]["placement_1"], 1)
+        self.assertEqual(rows["Bob"]["placement_2"], 1)
+
+    def test_single_league_stats_attaches_placement_counts(self):
+        g = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g, player=self.player_a, victory_points=10, order=0
+        )
+        GameResult.objects.create(
+            game=g, player=self.player_b, victory_points=5, order=1
+        )
+        data = stats_for_filter(["liga-a"], False)
+        by_name = {r["player_name"]: r for r in data["player_rows"]}
+        self.assertEqual(by_name["Ana"]["placement_1"], 1)
+        self.assertEqual(by_name["Ana"]["placement_2"], 0)
+        self.assertEqual(by_name["Bob"]["placement_2"], 1)

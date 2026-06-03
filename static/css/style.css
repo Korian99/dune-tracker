@@ -401,6 +401,13 @@ h2 {
   margin-bottom: 0.65rem;
 }
 
+.league-game-card__title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--spice-bright);
+}
+
 .league-game-card__date {
   font-weight: 600;
   color: var(--spice-bright);

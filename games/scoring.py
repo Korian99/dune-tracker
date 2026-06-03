@@ -196,6 +196,9 @@ def game_score_summary(game, league: League) -> list[dict[str, Any]]:
                 "formula": breakdown_display(breakdown),
                 "is_winner": result.is_winner,
                 "in_vp_tie": result.in_vp_tie,
+                "sardaukar_count": result.sardaukar_count,
+                "sardaukar_label": result.sardaukar_label,
+                "alliances_held": result.alliances_held,
             }
         )
     return rows

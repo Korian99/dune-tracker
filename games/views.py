@@ -420,11 +420,20 @@ def _league_games_sort(request) -> str:
     return "oldest" if sort == "oldest" else "newest"
 
 
+def _league_fecha_numbers(league: League) -> dict[int, int]:
+    """Map game pk → Fecha N° (1 = oldest by played_on, then created_at)."""
+    ordered_pks = league.games.order_by("played_on", "created_at").values_list(
+        "pk", flat=True
+    )
+    return {pk: index + 1 for index, pk in enumerate(ordered_pks)}
+
+
 def league_detail(request, slug):
     from .hitos import league_hito_snapshots
 
     league = get_object_or_404(League, slug=slug)
     games_sort = _league_games_sort(request)
+    fecha_by_pk = _league_fecha_numbers(league)
     games = league.games.select_related(
         "designated_winner__player"
     ).prefetch_related("results__player")
@@ -435,7 +444,11 @@ def league_detail(request, slug):
     scoring_config = resolve_scoring_config(league)
     standings = league_standings(league)
     game_entries = [
-        {"game": game, "player_scores": game_score_summary(game, league)}
+        {
+            "game": game,
+            "fecha_number": fecha_by_pk[game.pk],
+            "player_scores": game_score_summary(game, league),
+        }
         for game in games
     ]
     return render(
