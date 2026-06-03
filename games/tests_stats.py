@@ -60,6 +60,43 @@ class StatsQueriesTests(TestCase):
         self.assertEqual(leaders["Muad'Dib"]["win_rate"], 50.0)
         self.assertEqual(leaders["Chani"]["wins"], 1)
 
+    def test_leader_stats_placement_counts(self):
+        g1 = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g1, player=self.player_a, leader="Muad'Dib", victory_points=10, order=0
+        )
+        GameResult.objects.create(
+            game=g1, player=self.player_b, leader="Chani", victory_points=5, order=1
+        )
+        g2 = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g2, player=self.player_a, leader="Muad'Dib", victory_points=5, order=0
+        )
+        GameResult.objects.create(
+            game=g2, player=self.player_b, leader="Chani", victory_points=10, order=1
+        )
+        results = GameResult.objects.filter(game__league=self.league)
+        leaders = {r["leader"]: r for r in aggregate_leader_stats(results)}
+        self.assertEqual(leaders["Muad'Dib"]["placement_1"], 1)
+        self.assertEqual(leaders["Muad'Dib"]["placement_2"], 1)
+        self.assertEqual(leaders["Chani"]["placement_1"], 1)
+        self.assertEqual(leaders["Chani"]["placement_2"], 1)
+        self.assertEqual(leaders["Muad'Dib"]["placement_3"], 0)
+        self.assertEqual(leaders["Muad'Dib"]["placement_4"], 0)
+
+    def test_stats_for_filter_includes_leader_placement_counts(self):
+        g = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g, player=self.player_a, leader="Muad'Dib", victory_points=10, order=0
+        )
+        GameResult.objects.create(
+            game=g, player=self.player_b, leader="Chani", victory_points=5, order=1
+        )
+        data = stats_for_filter(["liga-a"], False)
+        by_leader = {r["leader"]: r for r in data["leader_rows"]}
+        self.assertEqual(by_leader["Muad'Dib"]["placement_1"], 1)
+        self.assertEqual(by_leader["Chani"]["placement_2"], 1)
+
     def test_stats_for_filter_uses_league_standings_when_one_league(self):
         g = self._game(league=self.league)
         GameResult.objects.create(

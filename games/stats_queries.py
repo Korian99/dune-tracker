@@ -77,6 +77,19 @@ def _placement_counts_for_results(results) -> dict[str, dict[int, int]]:
     return dict(by_player)
 
 
+def _placement_counts_for_leaders(results) -> dict[str, dict[int, int]]:
+    """Per leader name: how many finishes at each placement (1–4) when that leader was played."""
+    by_leader: dict[str, dict[int, int]] = defaultdict(_empty_placement_counts)
+    for result in results:
+        leader = (result.leader or "").strip()
+        if not leader:
+            continue
+        placement = result.placement
+        if 1 <= placement <= 4:
+            by_leader[leader][placement] += 1
+    return dict(by_leader)
+
+
 def _attach_placement_counts(rows: list[dict], counts_by_name: dict[str, dict[int, int]]):
     """Add placement_1 … placement_4 to rows keyed by name or player_name."""
     for row in rows:
@@ -122,6 +135,7 @@ def aggregate_player_stats(results) -> list[dict]:
 
 def aggregate_leader_stats(results) -> list[dict]:
     """Per-leader: times played, wins, win rate, average placement, average VP."""
+    counts_by_leader = _placement_counts_for_leaders(results)
     by_leader: dict[str, list] = defaultdict(list)
     for result in results:
         leader = (result.leader or "").strip()
@@ -135,6 +149,7 @@ def aggregate_leader_stats(results) -> list[dict]:
         vp_sum = sum(r.victory_points for r in game_results)
         placement_sum = sum(r.placement for r in game_results)
         avg_placement = placement_sum / times if times else 0
+        counts = counts_by_leader.get(leader, _empty_placement_counts())
         rows.append(
             {
                 "leader": leader,
@@ -144,6 +159,10 @@ def aggregate_leader_stats(results) -> list[dict]:
                 "avg_vp": round(vp_sum / times, 1) if times else 0,
                 "avg_placement": round(avg_placement, 1),
                 "usual_placement": _format_placement(avg_placement),
+                "placement_1": counts[1],
+                "placement_2": counts[2],
+                "placement_3": counts[3],
+                "placement_4": counts[4],
             }
         )
     rows.sort(key=lambda r: (-r["times_played"], -r["win_rate"], -r["avg_placement"]))
