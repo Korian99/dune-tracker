@@ -14,7 +14,13 @@ SECRET_KEY = os.environ.get(
     "django-insecure-dev-only-change-in-production",
 )
 DEBUG = os.environ.get("DEBUG", "true").lower() in ("1", "true", "yes")
-ALLOWED_HOSTS = _csv("ALLOWED_HOSTS", "127.0.0.1,localhost")
+
+# Hosts: env + Render auto (prevents 400 DisallowedHost)
+_allowed = _csv("ALLOWED_HOSTS")
+_render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+if _render_host and _render_host not in _allowed:
+    _allowed.append(_render_host)
+ALLOWED_HOSTS = _allowed or ["127.0.0.1", "localhost"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -61,13 +67,12 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 if DATABASE_URL:
     import dj_database_url
 
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=True,
-        ),
-    }
+    # Neon scale-to-zero closes idle connections (~5 min). Reusing dead
+    # connections causes intermittent failures until refresh. See Neon Django guide.
+    _db = dj_database_url.parse(DATABASE_URL, ssl_require=True)
+    _db["CONN_MAX_AGE"] = int(os.environ.get("DB_CONN_MAX_AGE", "0"))
+    _db["CONN_HEALTH_CHECKS"] = True
+    DATABASES = {"default": _db}
 else:
     DATABASES = {
         "default": {
@@ -112,4 +117,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    CSRF_TRUSTED_ORIGINS = _csv("CSRF_TRUSTED_ORIGINS")
+    _csrf = _csv("CSRF_TRUSTED_ORIGINS")
+    if _render_host:
+        _origin = f"https://{_render_host}"
+        if _origin not in _csrf:
+            _csrf.append(_origin)
+    CSRF_TRUSTED_ORIGINS = _csrf

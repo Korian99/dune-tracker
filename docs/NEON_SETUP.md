@@ -102,8 +102,30 @@ Without `DATABASE_URL`, the app uses local `db.sqlite3` as before.
 | `DisallowedHost` | `ALLOWED_HOSTS` = exact Render hostname only. |
 | CSRF failed | `CSRF_TRUSTED_ORIGINS` = `https://` + same hostname. |
 | Build OK, 500 on first hit | Check **Logs** on Render; often wrong `DATABASE_URL` or password with special characters (URL-encode if needed). |
-| Slow first load after hours | Neon free tier may wake from sleep — normal for hobby use. |
+| Slow first load after hours | Neon + Render free tier **sleep when idle** — first click wakes both (5–30 s). Normal. |
+| Error / “not found” until you refresh | Stale DB connection or cold start failed. Fixed with `CONN_MAX_AGE=0` + health checks in `settings.py`; redeploy. Retry once after a few seconds. |
 | Migrations didn’t run | Render **Logs** → search for `migrate`; re-deploy or run `python manage.py migrate` in Shell. |
+
+---
+
+## Why saves sometimes fail until you refresh
+
+On the **free** plan, two things sleep after ~5–15 minutes without traffic:
+
+1. **Render** — your Django app spins down  
+2. **Neon** — the database compute suspends  
+
+When you submit a form, the app and DB must **wake up**. The first request can fail (timeout, closed connection) if Django reuses a connection Neon already closed. Refreshing works because everything is warm.
+
+**What we did in code:** `CONN_MAX_AGE=0` and `CONN_HEALTH_CHECKS=True` so each request uses a fresh, verified connection.
+
+**What you can do:**
+
+- Wait 5–10 seconds after the first slow page load, then submit again  
+- In Neon dashboard: **Project settings** → increase **Scale to zero** delay (paid plans can disable it)  
+- Accept ~2–5 s delay after idle — or upgrade Neon/Render to stay always-on  
+
+This is a platform limit, not lost data — your games are still in Neon once the save succeeds.
 
 ---
 
