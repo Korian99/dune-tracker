@@ -29,8 +29,8 @@ Stack: Django 5, SQLite (local) / PostgreSQL (Render), WhiteNoise, Gunicorn.
 ```
 config/           # settings, root URLs
 games/            # main app
-  models.py       # League, Game, GameResult
-  forms.py        # GameForm, GameResultFormSet, LeagueForm (Spanish UI strings)
+  models.py       # Player, League, LeagueMembership, Game, GameResult
+  forms.py        # GameForm, GameResultFormSet, LeagueForm, LeagueAddPlayerForm
   views.py        # CRUD + stats
   scoring.py      # League points (standard + victory_points override)
   urls.py
@@ -42,11 +42,21 @@ README.md         # developer setup (English)
 
 ## Data model
 
+### `Player`
+
+- `name` (unique), `slug`, `created_at`
+- `resolve_player(name, league=None)` — get/create player; auto-adds `LeagueMembership` when `league` is set
+
 ### `League`
 
 - Groups games under shared rules.
+- `players` M2M through `LeagueMembership` (`joined_at`) — league roster
 - `scoring_notes` — human-readable rules (Spanish prose from users).
 - `scoring_config` — JSON (`system`: `standard` or `victory_points`); see League scoring below.
+
+### `LeagueMembership`
+
+- Through table: `league` + `player`, unique together.
 
 ### `Game`
 
@@ -55,10 +65,17 @@ README.md         # developer setup (English)
 
 ### `GameResult` (inline per game)
 
-- `player_name`, `leader`, `victory_points`
+- `player` FK (required), `leader`, `victory_points`
 - `sardaukar_count` — Bloodlines Sardaukar commanders (0–14)
 - Alliance booleans (one player per faction per game): `alliance_emperor`, `alliance_guild`, `alliance_bene_gesserit`, `alliance_fremen`
 - `ALLIANCE_FIELDS` — list of `(field_name, Spanish label)` for forms and display
+- Unique per game: `(game, player)`
+
+**Game logging UX:** each result row uses `player_pick` (text + `<datalist>` of league roster). Typing a new name creates a `Player` and adds them to the league roster when the game has a league.
+
+### Migration `0004`
+
+- Creates `Player` / `LeagueMembership`; migrates distinct legacy `player_name` strings to `Player` (global unique names); adds league memberships for players in league games.
 
 ## URLs (`games` namespace)
 
@@ -73,8 +90,9 @@ README.md         # developer setup (English)
 | `/stats/` | `stats` | Stats (`?league=slug`) |
 | `/leagues/` | `league_list` | Leagues |
 | `/leagues/new/` | `league_create` | Create league |
-| `/leagues/<slug>/` | `league_detail` | League + standings |
+| `/leagues/<slug>/` | `league_detail` | League + roster + standings |
 | `/leagues/<slug>/edit/` | `league_edit` | Edit league |
+| `/leagues/<slug>/players/add/` | `league_add_player` | POST add player to roster |
 
 ## League scoring
 

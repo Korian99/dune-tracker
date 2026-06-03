@@ -1,8 +1,40 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 from django.utils.text import slugify
 
 from .defaults import default_league_scoring_config
+
+
+class Player(models.Model):
+    """Registered player; may belong to one or more league rosters."""
+
+    name = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=80, unique=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.name) or "player"
+            slug = base
+            n = 1
+            qs = Player.objects.filter(slug=slug)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            while qs.exists():
+                slug = f"{base}-{n}"
+                n += 1
+                qs = Player.objects.filter(slug=slug)
+                if self.pk:
+                    qs = qs.exclude(pk=self.pk)
+            self.slug = slug
+        super().save(*args, **kwargs)
 
 
 class League(models.Model):
@@ -21,6 +53,11 @@ class League(models.Model):
         help_text="Structured scoring JSON — see games/defaults.py and games/scoring.py",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    players = models.ManyToManyField(
+        Player,
+        through="LeagueMembership",
+        related_name="leagues",
+    )
 
     class Meta:
         ordering = ["name"]
@@ -42,6 +79,50 @@ class League(models.Model):
     @property
     def game_count(self):
         return self.games.count()
+
+
+class LeagueMembership(models.Model):
+    """Player on a league roster."""
+
+    league = models.ForeignKey(
+        League,
+        on_delete=models.CASCADE,
+        related_name="memberships",
+    )
+    player = models.ForeignKey(
+        Player,
+        on_delete=models.CASCADE,
+        related_name="memberships",
+    )
+    joined_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["player__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["league", "player"],
+                name="unique_league_player",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.player.name} @ {self.league.name}"
+
+
+def resolve_player(name: str, league: League | None = None) -> Player:
+    """
+    Find or create a player by display name; add to league roster when league is set.
+    """
+    normalized = " ".join((name or "").split())
+    if not normalized:
+        raise ValueError("Player name is required")
+    player, _ = Player.objects.get_or_create(
+        name=normalized,
+        defaults={"slug": ""},
+    )
+    if league:
+        LeagueMembership.objects.get_or_create(league=league, player=player)
+    return player
 
 
 class Game(models.Model):
@@ -125,7 +206,11 @@ class GameResult(models.Model):
         on_delete=models.CASCADE,
         related_name="results",
     )
-    player_name = models.CharField(max_length=80)
+    player = models.ForeignKey(
+        Player,
+        on_delete=models.PROTECT,
+        related_name="game_results",
+    )
     leader = models.CharField(max_length=120, blank=True)
     victory_points = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(20)],
@@ -145,13 +230,13 @@ class GameResult(models.Model):
         ordering = ["order", "id"]
         constraints = [
             models.UniqueConstraint(
-                fields=["game", "player_name"],
+                fields=["game", "player"],
                 name="unique_player_per_game",
             ),
         ]
 
     def __str__(self):
-        return f"{self.player_name} — {self.victory_points} PV"
+        return f"{self.player.name} — {self.victory_points} PV"
 
     @property
     def placement(self):

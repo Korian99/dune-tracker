@@ -9,6 +9,13 @@
 
 <form method="post" class="game-form">
   {% csrf_token %}
+  {% if roster_names %}
+  <datalist id="roster-players">
+    {% for name in roster_names %}
+      <option value="{{ name }}">
+    {% endfor %}
+  </datalist>
+  {% endif %}
   <datalist id="leader-suggestions">
     {% for leader in leader_suggestions %}
       <option value="{{ leader }}">
@@ -53,9 +60,9 @@
         <div class="result-row">
           {% for hidden in result_form.hidden_fields %}{{ hidden }}{% endfor %}
           <div class="field">
-            {{ result_form.player_name.label_tag }}
-            {{ result_form.player_name }}
-            {{ result_form.player_name.errors }}
+            {{ result_form.player_pick.label_tag }}
+            {{ result_form.player_pick }}
+            {{ result_form.player_pick.errors }}
           </div>
           <div class="field">
             {{ result_form.leader.label_tag }}
@@ -77,7 +84,7 @@
             <div class="alliance-checks">
               <label>{{ result_form.alliance_emperor }} Emperador</label>
               <label>{{ result_form.alliance_guild }} Gremio</label>
-              <label>{{ result_form.alliance_bene_gesserit }} BG</label>
+              <label>{{ result_form.alliance_bene_gesserit }} Bene Gesserit</label>
               <label>{{ result_form.alliance_fremen }} Fremen</label>
             </div>
           </div>
@@ -89,7 +96,7 @@
         </div>
       {% endfor %}
     </div>
-    <p class="help">Mínimo dos jugadores. Cada alianza de facción solo puede asignarse a un jugador.</p>
+    <p class="help">Mínimo dos jugadores. Elige del plantel de la liga o escribe un nombre nuevo (se añadirá al plantel). Cada alianza de facción solo puede asignarse a un jugador.</p>
   </fieldset>
 
   <div class="form-actions">

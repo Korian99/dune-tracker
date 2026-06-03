@@ -38,13 +38,13 @@
         <td data-label="Liga">{% if game.league %}{{ game.league.name }}{% else %}—{% endif %}</td>
         <td data-label="Edición">
           {{ game.get_base_game_display }}
-          {% if game.bloodlines %}<span class="tag tag-sm">BL</span>{% endif %}
+          {% if game.bloodlines %}<span class="tag tag-sm">Bloodlines</span>{% endif %}
         </td>
         <td data-label="Rondas">{{ game.rounds|default:"—" }}</td>
         <td data-label="Duración">{{ game.formatted_duration|default:"—" }}</td>
         <td data-label="Ganador">
           {% with w=game.winner %}
-            {% if w %}{{ w.player_name }} ({{ w.victory_points }} PV){% else %}—{% endif %}
+            {% if w %}{{ w.player.name }} ({{ w.victory_points }} PV){% else %}—{% endif %}
           {% endwith %}
         </td>
         <td data-label=""><a href="{% url 'games:detail' pk=game.pk %}">Detalle</a></td>

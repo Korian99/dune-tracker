@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 from django.test import TestCase
 
-from .models import Game, GameResult, League
+from .models import Game, GameResult, League, Player, resolve_player
 from .scoring import (
     compute_league_points,
     compute_league_points_breakdown,
@@ -28,9 +28,10 @@ class LeagueScoringTests(TestCase):
         )
 
     def _result(self, name, vp, **kwargs):
+        player = resolve_player(name, league=self.league)
         return GameResult.objects.create(
             game=self.game,
-            player_name=name,
+            player=player,
             victory_points=vp,
             **kwargs,
         )
@@ -40,7 +41,7 @@ class LeagueScoringTests(TestCase):
         self._result("B", 10)
         self._result("C", 8)
         self._result("D", 6)
-        results = {r.player_name: r for r in self.game.results.all()}
+        results = {r.player.name: r for r in self.game.results.select_related("player")}
         self.assertEqual(compute_league_points(results["A"], self.league), 8.0)
         self.assertEqual(compute_league_points(results["B"], self.league), 4.0)
         self.assertEqual(compute_league_points(results["C"], self.league), 2.0)
@@ -76,7 +77,8 @@ class LeagueScoringTests(TestCase):
         self.assertEqual(breakdown["total"], 10.0)
 
     def test_best_eight_counts_only_eight_games(self):
-        player = "Carlos"
+        player_name = "Carlos"
+        player = resolve_player(player_name, league=self.league)
         for i in range(9):
             g = Game.objects.create(
                 league=self.league,
@@ -85,17 +87,17 @@ class LeagueScoringTests(TestCase):
                 rounds=5,
             )
             GameResult.objects.create(
-                game=g, player_name=player, victory_points=10, order=0
+                game=g, player=player, victory_points=10, order=0
             )
+            rival = resolve_player("Rival", league=self.league)
             GameResult.objects.create(
-                game=g, player_name="Rival", victory_points=5, order=1
+                game=g, player=rival, victory_points=5, order=1
             )
         rows = league_standings(self.league)
-        carlos = next(r for r in rows if r["player_name"] == player)
+        carlos = next(r for r in rows if r["player_name"] == player_name)
         self.assertEqual(carlos["games_played"], 9)
         self.assertEqual(carlos["games"], 8)
         self.assertEqual(carlos["games_discarded"], 1)
-        # Nine games at 7 league pts each (10 PV) → sum best 8 = 56
         self.assertEqual(carlos["league_points"], 56.0)
 
     def test_ninth_worst_score_discarded(self):
@@ -107,8 +109,8 @@ class LeagueScoringTests(TestCase):
             "early_win_max_round": 0,
         }
         self.league.save()
-        player = "Ana"
-        # 8 wins at 5 pts (1st only) + 1 game at 1 pt (4th)
+        player_name = "Ana"
+        player = resolve_player(player_name, league=self.league)
         for i in range(8):
             g = Game.objects.create(
                 league=self.league,
@@ -116,26 +118,26 @@ class LeagueScoringTests(TestCase):
                 player_count=2,
             )
             GameResult.objects.create(
-                game=g, player_name=player, victory_points=10, order=0
+                game=g, player=player, victory_points=10, order=0
             )
-            GameResult.objects.create(
-                game=g, player_name="X", victory_points=3, order=1
-            )
+            x = resolve_player("X", league=self.league)
+            GameResult.objects.create(game=g, player=x, victory_points=3, order=1)
         bad = Game.objects.create(
             league=self.league,
             played_on=date.today(),
             player_count=4,
         )
-        GameResult.objects.create(game=bad, player_name=player, victory_points=3, order=0)
+        GameResult.objects.create(game=bad, player=player, victory_points=3, order=0)
         for n, vp in [("B", 15), ("C", 12), ("D", 10)]:
-            GameResult.objects.create(game=bad, player_name=n, victory_points=vp, order=1)
+            p = resolve_player(n, league=self.league)
+            GameResult.objects.create(game=bad, player=p, victory_points=vp, order=1)
 
         rows = league_standings(self.league)
-        ana = next(r for r in rows if r["player_name"] == player)
+        ana = next(r for r in rows if r["player_name"] == player_name)
         self.assertEqual(ana["games_played"], 9)
         self.assertEqual(ana["games_discarded"], 1)
-        # 8 * 5 + 0 (4th place game discarded) = 40
-        self.assertEqual(ana["league_points"], 40.0)
+        self.assertEqual(ana["score_best_n"], 40.0)
+        self.assertEqual(ana["score_total"], 41.0)
 
     def test_victory_points_system_override(self):
         self.league.scoring_config = {"system": "victory_points", "count_games": 8}
@@ -166,3 +168,16 @@ class LeagueScoringTests(TestCase):
         cfg = resolve_scoring_config(empty)
         self.assertEqual(cfg["count_games"], 8)
         self.assertEqual(cfg["placement_points"][1], 5)
+
+
+class PlayerModelTests(TestCase):
+    def test_resolve_player_adds_to_league_roster(self):
+        league = League.objects.create(name="Liga", slug="liga")
+        player = resolve_player("  María  ", league=league)
+        self.assertEqual(player.name, "María")
+        self.assertTrue(league.players.filter(pk=player.pk).exists())
+
+    def test_resolve_player_reuses_same_name(self):
+        p1 = resolve_player("Bob")
+        p2 = resolve_player("Bob")
+        self.assertEqual(p1.pk, p2.pk)

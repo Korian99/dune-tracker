@@ -1,13 +1,13 @@
 from django.contrib import admin
 
-from .models import Game, GameResult, League
+from .models import Game, GameResult, League, LeagueMembership, Player
 
 
 class GameResultInline(admin.TabularInline):
     model = GameResult
     extra = 2
     fields = (
-        "player_name",
+        "player",
         "leader",
         "victory_points",
         "sardaukar_count",
@@ -18,11 +18,25 @@ class GameResultInline(admin.TabularInline):
     )
 
 
+class LeagueMembershipInline(admin.TabularInline):
+    model = LeagueMembership
+    extra = 1
+    autocomplete_fields = ["player"]
+
+
+@admin.register(Player)
+class PlayerAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "created_at")
+    search_fields = ("name",)
+    prepopulated_fields = {"slug": ("name",)}
+
+
 @admin.register(League)
 class LeagueAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "created_at")
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ("created_at",)
+    inlines = [LeagueMembershipInline]
 
 
 @admin.register(Game)
@@ -44,7 +58,7 @@ class GameAdmin(admin.ModelAdmin):
 class GameResultAdmin(admin.ModelAdmin):
     list_display = (
         "game",
-        "player_name",
+        "player",
         "leader",
         "victory_points",
         "sardaukar_count",

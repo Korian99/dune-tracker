@@ -58,7 +58,7 @@
         </p>
         {% with winner=game.winner %}
           {% if winner %}
-            <p class="card-winner">{{ winner.player_name }} · {{ winner.victory_points }} PV</p>
+            <p class="card-winner">{{ winner.player.name }} · {{ winner.victory_points }} PV</p>
           {% endif %}
         {% endwith %}
       </a>

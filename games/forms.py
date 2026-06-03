@@ -1,12 +1,8 @@
 from django import forms
 from django.forms import inlineformset_factory
 
-from .models import Game, GameResult, League
-from .scoring import (
-    DEFAULT_SCORING_NOTES,
-    config_from_form_data,
-    config_to_form_initial,
-)
+from .models import Game, GameResult, League, Player, resolve_player
+from .scoring import config_from_form_data, config_to_form_initial
 
 LEADER_SUGGESTIONS = [
     "Paul Atreides",
@@ -74,7 +70,7 @@ class LeagueForm(forms.ModelForm):
             "scoring_notes": forms.Textarea(
                 attrs={
                     "rows": 5,
-                    "placeholder": DEFAULT_SCORING_NOTES.strip()[:120] + "…",
+                    "placeholder": "Reglas de puntuación de la liga…",
                 }
             ),
         }
@@ -93,6 +89,23 @@ class LeagueForm(forms.ModelForm):
             league.save()
             self.save_m2m()
         return league
+
+
+class LeagueAddPlayerForm(forms.Form):
+    name = forms.CharField(
+        max_length=80,
+        label="Nombre del jugador",
+        widget=forms.TextInput(attrs={"placeholder": "Nombre"}),
+    )
+
+    def clean_name(self):
+        name = " ".join(self.cleaned_data["name"].split())
+        if not name:
+            raise forms.ValidationError("Introduce un nombre.")
+        return name
+
+    def save(self, league: League) -> Player:
+        return resolve_player(self.cleaned_data["name"], league=league)
 
 
 class GameForm(forms.ModelForm):
@@ -179,6 +192,16 @@ class GameForm(forms.ModelForm):
 
 
 class GameResultForm(forms.ModelForm):
+    player_pick = forms.CharField(
+        label="Jugador",
+        widget=forms.TextInput(
+            attrs={
+                "list": "roster-players",
+                "placeholder": "Elige del plantel o escribe un nombre",
+                "autocomplete": "off",
+            }
+        ),
+    )
     leader = forms.CharField(
         required=False,
         label="Líder",
@@ -193,7 +216,6 @@ class GameResultForm(forms.ModelForm):
     class Meta:
         model = GameResult
         fields = [
-            "player_name",
             "leader",
             "victory_points",
             "sardaukar_count",
@@ -203,7 +225,6 @@ class GameResultForm(forms.ModelForm):
             "alliance_fremen",
         ]
         labels = {
-            "player_name": "Jugador",
             "victory_points": "Puntos de victoria",
             "sardaukar_count": "Sardaukar",
             "alliance_emperor": "Emperador",
@@ -212,7 +233,6 @@ class GameResultForm(forms.ModelForm):
             "alliance_fremen": "Fremen",
         }
         widgets = {
-            "player_name": forms.TextInput(attrs={"placeholder": "Nombre"}),
             "victory_points": forms.NumberInput(attrs={"min": 0, "max": 20}),
             "sardaukar_count": forms.NumberInput(attrs={"min": 0, "max": 14}),
             "alliance_emperor": forms.CheckboxInput(),
@@ -221,8 +241,39 @@ class GameResultForm(forms.ModelForm):
             "alliance_fremen": forms.CheckboxInput(),
         }
 
+    def __init__(self, *args, **kwargs):
+        self.league = kwargs.pop("league", None)
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.player_id:
+            self.fields["player_pick"].initial = self.instance.player.name
+
+    def clean_player_pick(self):
+        name = " ".join(self.cleaned_data.get("player_pick", "").split())
+        if not name:
+            return ""
+        return name
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        name = self.cleaned_data.get("player_pick", "")
+        if name:
+            instance.player = resolve_player(name, league=self.league)
+        if commit:
+            instance.save()
+        return instance
+
 
 class BaseGameResultFormSet(forms.BaseInlineFormSet):
+    def __init__(self, *args, **kwargs):
+        self.league = kwargs.pop("league", None)
+        form_kwargs = kwargs.pop("form_kwargs", None) or {}
+        form_kwargs.setdefault("league", self.league)
+        kwargs["form_kwargs"] = form_kwargs
+        super().__init__(*args, **kwargs)
+
+    def _player_label(self, form):
+        return form.cleaned_data.get("player_pick", "").strip()
+
     def clean(self):
         super().clean()
         active = [
@@ -230,16 +281,22 @@ class BaseGameResultFormSet(forms.BaseInlineFormSet):
             for f in self.forms
             if f.cleaned_data
             and not f.cleaned_data.get("DELETE")
-            and f.cleaned_data.get("player_name", "").strip()
+            and self._player_label(f)
         ]
         if len(active) < 2:
             raise forms.ValidationError(
                 "Añade al menos dos jugadores con puntos de victoria."
             )
 
+        names = [self._player_label(f) for f in active]
+        if len(names) != len(set(names)):
+            raise forms.ValidationError(
+                "Cada jugador solo puede aparecer una vez en la partida."
+            )
+
         for field, label in GameResult.ALLIANCE_FIELDS:
             holders = [
-                f.cleaned_data.get("player_name", "").strip()
+                self._player_label(f)
                 for f in active
                 if f.cleaned_data.get(field)
             ]
@@ -257,7 +314,7 @@ class BaseGameResultFormSet(forms.BaseInlineFormSet):
         for form in self.forms:
             if not form.cleaned_data or form.cleaned_data.get("DELETE"):
                 continue
-            if not form.cleaned_data.get("player_name", "").strip():
+            if not self._player_label(form):
                 continue
             saved.append(form.save(commit=commit))
         return saved

@@ -56,7 +56,7 @@
       {% for result in game.results.all %}
       <tr class="{% if result.is_winner %}row-winner{% endif %}">
         <td data-label="#">{{ result.placement }}</td>
-        <td data-label="Jugador">{{ result.player_name }}{% if result.is_winner %} <span class="tag">Ganador</span>{% endif %}</td>
+        <td data-label="Jugador">{{ result.player.name }}{% if result.is_winner %} <span class="tag">Ganador</span>{% endif %}</td>
         <td data-label="Líder">{{ result.leader|default:"—" }}</td>
         <td data-label="PV"><strong>{{ result.victory_points }}</strong></td>
         {% if league_score_rows %}

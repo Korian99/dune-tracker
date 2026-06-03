@@ -191,11 +191,13 @@ def league_standings(league: League):
     per_player_games: dict[str, list[tuple[float, GameResult, LeaguePointsBreakdown]]] = (
         defaultdict(list)
     )
-    results = GameResult.objects.filter(game__league=league).select_related("game")
+    results = GameResult.objects.filter(game__league=league).select_related(
+        "game", "player"
+    )
 
     for result in results:
         breakdown = compute_league_points_breakdown(result, league)
-        per_player_games[result.player_name].append(
+        per_player_games[result.player.name].append(
             (breakdown["total"], result, breakdown)
         )
 
@@ -206,24 +208,32 @@ def league_standings(league: League):
         games_counted = len(counted)
         games_discarded = games_played - games_counted
 
-        points = sum(x[0] for x in counted)
-        vp_sum = sum(x[1].victory_points for x in counted)
-        wins = sum(1 for x in counted if x[1].is_winner)
-        early_wins = sum(x[2]["early_win"] for x in counted)
-        vp_bonuses = sum(x[2]["vp_threshold_bonuses"] for x in counted)
+        score_total = round(sum(x[0] for x in all_games), 1)
+        score_best_n = round(sum(x[0] for x in counted), 1)
+        wins = sum(1 for x in all_games if x[1].is_winner)
+        win_rate = (
+            round(100 * wins / games_played, 1) if games_played else 0.0
+        )
+        score_average = (
+            round(score_best_n / games_counted, 1) if games_counted else 0.0
+        )
 
         rows.append(
             {
                 "player_name": name,
-                "league_points": round(points, 1),
+                "league_points": score_best_n,
+                "score_total": score_total,
+                "score_best_n": score_best_n,
+                "score_average": score_average,
+                "win_rate": win_rate,
                 "games": games_counted,
                 "games_played": games_played,
                 "games_discarded": games_discarded,
                 "wins": wins,
-                "avg_vp": round(vp_sum / games_counted, 1) if games_counted else 0,
-                "early_wins": early_wins,
-                "vp_bonuses": vp_bonuses,
+                "count_games": count_games,
             }
         )
-    rows.sort(key=lambda r: (-r["league_points"], -r["wins"], -r["avg_vp"]))
+    rows.sort(
+        key=lambda r: (-r["score_best_n"], -r["wins"], -r["win_rate"])
+    )
     return rows

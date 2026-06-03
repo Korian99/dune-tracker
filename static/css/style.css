@@ -921,3 +921,30 @@ h2 {
     max-width: 5.5rem;
   }
 }
+
+.roster-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.roster-list li {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.75rem;
+}
+
+.inline-add-player .field-row {
+  align-items: flex-end;
+  grid-template-columns: 1fr auto;
+  max-width: 28rem;
+}
+
+.inline-add-player label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
