@@ -77,6 +77,24 @@
     </div>
   </fieldset>
 
+  {% if is_edit and form.powerscore_value %}
+  <fieldset class="form-section">
+    <legend>Hitos</legend>
+    <p class="help">Highscore y Lowscore se calculan solos (máx. y mín. PV). Edita Powerscore aquí.</p>
+    <div class="field">
+      {{ form.powerscore_value.label_tag }}
+      {{ form.powerscore_value }}
+      <span class="help">{{ form.powerscore_value.help_text }}</span>
+      {{ form.powerscore_value.errors }}
+    </div>
+    <div class="field">
+      {{ form.powerscore_player.label_tag }}
+      {{ form.powerscore_player }}
+      {{ form.powerscore_player.errors }}
+    </div>
+  </fieldset>
+  {% endif %}
+
   <div class="form-actions">
     <button type="submit" class="btn btn-primary">Guardar liga</button>
     <a href="{% if is_edit %}{% url 'games:league_detail' slug=league.slug %}{% else %}{% url 'games:league_list' %}{% endif %}" class="btn btn-ghost">Cancelar</a>

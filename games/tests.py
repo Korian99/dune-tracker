@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .forms import GameAllianceForm
@@ -424,3 +424,35 @@ class GameAllianceFormTests(TestCase):
             player_names=["Kori", "Alex"],
         )
         self.assertTrue(form.is_valid(), form.errors)
+
+
+STORAGES_OVERRIDE = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+
+@override_settings(STORAGES=STORAGES_OVERRIDE)
+class LeagueGamesSortTests(TestCase):
+    def test_league_detail_games_sort_newest_and_oldest(self):
+        league = League.objects.create(name="Sort Liga", slug="sort-liga")
+        old = Game.objects.create(
+            league=league, played_on=date(2024, 1, 1), player_count=2
+        )
+        new = Game.objects.create(
+            league=league, played_on=date(2025, 6, 1), player_count=2
+        )
+        client = Client()
+        url = reverse("games:league_detail", kwargs={"slug": league.slug})
+
+        newest = client.get(url)
+        self.assertEqual(newest.status_code, 200)
+        ids = [e["game"].pk for e in newest.context["game_entries"]]
+        self.assertEqual(ids, [new.pk, old.pk])
+
+        oldest = client.get(url, {"sort": "oldest"})
+        self.assertEqual(oldest.context["games_sort"], "oldest")
+        ids_old = [e["game"].pk for e in oldest.context["game_entries"]]
+        self.assertEqual(ids_old, [old.pk, new.pk])

@@ -1,49 +1,48 @@
 """
-League hitos (highscores): definitions, defaults, and current record holders.
+League hitos: Highscore/Lowscore from max/min VP; Powerscore edited manually.
 """
 
 from typing import Any, TypedDict
 
 from .models import GameResult, League, LeagueHito
-from .scoring import compute_league_points
 
 
-class HitoHolderRow(TypedDict):
+class HitoHolderRow(TypedDict, total=False):
     player_name: str
-    game_id: int
+    game_id: int | None
     played_on: str
     victory_points: int
-    league_points: float
 
 
 class HitoSnapshot(TypedDict):
     hito: LeagueHito
-    value: float | int | None
+    value: int | None
     value_label: str
     holders: list[HitoHolderRow]
     empty: bool
+    is_manual: bool
 
 
 DEFAULT_LEAGUE_HITOS: tuple[dict[str, Any], ...] = (
     {
         "slug": "highscore",
         "name": "Highscore",
-        "description": "Mayor puntuación de liga en una sola partida.",
-        "metric": LeagueHito.Metric.MAX_LEAGUE_POINTS,
+        "description": "Mayor PV en una partida (automático).",
+        "metric": LeagueHito.Metric.AUTO_MAX_VP,
         "order": 0,
     },
     {
         "slug": "powerscore",
         "name": "Powerscore",
-        "description": "Más puntos de victoria (PV) en una sola partida.",
-        "metric": LeagueHito.Metric.MAX_VICTORY_POINTS,
+        "description": "Récord de la liga; edítalo al guardar la liga.",
+        "metric": LeagueHito.Metric.MANUAL,
         "order": 1,
     },
     {
         "slug": "lowscore",
         "name": "Lowscore",
-        "description": "Menor puntuación de liga en una sola partida.",
-        "metric": LeagueHito.Metric.MIN_LEAGUE_POINTS,
+        "description": "Menor PV en una partida (automático).",
+        "metric": LeagueHito.Metric.AUTO_MIN_VP,
         "order": 2,
     },
 )
@@ -70,22 +69,12 @@ def ensure_default_hitos(league: League) -> list[LeagueHito]:
     return created
 
 
-def _metric_value(result: GameResult, league: League, metric: str) -> float:
-    if metric == LeagueHito.Metric.MAX_VICTORY_POINTS:
-        return float(result.victory_points)
-    return compute_league_points(result, league)
+def powerscore_hito(league: League) -> LeagueHito | None:
+    ensure_default_hitos(league)
+    return league.hitos.filter(slug="powerscore").first()
 
 
-def _format_value(value: float, metric: str) -> str:
-    if metric == LeagueHito.Metric.MAX_VICTORY_POINTS:
-        return f"{int(value)} PV"
-    if value == int(value):
-        return str(int(value))
-    return str(value)
-
-
-def snapshot_for_hito(league: League, hito: LeagueHito) -> HitoSnapshot:
-    """Current record holder(s) for one hito."""
+def _auto_vp_snapshot(league: League, hito: LeagueHito, pick_max: bool) -> HitoSnapshot:
     results = list(
         GameResult.objects.filter(game__league=league)
         .select_related("player", "game")
@@ -98,40 +87,64 @@ def snapshot_for_hito(league: League, hito: LeagueHito) -> HitoSnapshot:
             "value_label": "—",
             "holders": [],
             "empty": True,
+            "is_manual": False,
         }
 
-    scored = [(_metric_value(r, league, hito.metric), r) for r in results]
-    if hito.metric == LeagueHito.Metric.MIN_LEAGUE_POINTS:
-        target = min(v for v, _ in scored)
-    else:
-        target = max(v for v, _ in scored)
-
+    target = (
+        max(r.victory_points for r in results)
+        if pick_max
+        else min(r.victory_points for r in results)
+    )
     holders: list[HitoHolderRow] = []
-    for value, result in scored:
-        if value != target:
+    for result in results:
+        if result.victory_points != target:
             continue
-        lp = compute_league_points(result, league)
         holders.append(
             {
                 "player_name": result.player.name,
                 "game_id": result.game_id,
                 "played_on": result.game.played_on.isoformat(),
                 "victory_points": result.victory_points,
-                "league_points": lp,
             }
         )
 
     return {
         "hito": hito,
         "value": target,
-        "value_label": _format_value(target, hito.metric),
+        "value_label": f"{target} PV",
         "holders": holders,
         "empty": False,
+        "is_manual": False,
     }
 
 
+def _manual_snapshot(hito: LeagueHito) -> HitoSnapshot:
+    has_content = bool(hito.manual_value.strip()) or hito.manual_player_id
+    holders: list[HitoHolderRow] = []
+    if hito.manual_player_id:
+        holders.append({"player_name": hito.manual_player.name})
+
+    label = hito.manual_value.strip() or "—"
+    return {
+        "hito": hito,
+        "value": None,
+        "value_label": label,
+        "holders": holders,
+        "empty": not has_content,
+        "is_manual": True,
+    }
+
+
+def snapshot_for_hito(league: League, hito: LeagueHito) -> HitoSnapshot:
+    if hito.metric == LeagueHito.Metric.MANUAL:
+        return _manual_snapshot(hito)
+    if hito.metric == LeagueHito.Metric.AUTO_MIN_VP:
+        return _auto_vp_snapshot(league, hito, pick_max=False)
+    return _auto_vp_snapshot(league, hito, pick_max=True)
+
+
 def league_hito_snapshots(league: League) -> list[HitoSnapshot]:
-    """Active hitos with current holders, ordered for display."""
     ensure_default_hitos(league)
-    hitos = league.hitos.filter(is_active=True).order_by("order", "slug")
+    hitos = league.hitos.filter(is_active=True).select_related("manual_player")
+    hitos = hitos.order_by("order", "slug")
     return [snapshot_for_hito(league, hito) for hito in hitos]

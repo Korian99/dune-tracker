@@ -50,7 +50,10 @@
 {% if hito_snapshots %}
 <section class="section hitos-section">
   <h2>Hitos</h2>
-  <p class="help">Récords de la liga por partida. Los nombres se pueden personalizar en el administrador.</p>
+  <p class="help">
+    Highscore y Lowscore: máximo y mínimo PV en una partida.
+    <a href="{% url 'games:league_edit' slug=league.slug %}">Editar Powerscore</a>
+  </p>
   <div class="hitos-grid">
     {% for snap in hito_snapshots %}
     <article class="hito-card">
@@ -59,20 +62,21 @@
       <p class="hito-card__desc">{{ snap.hito.description }}</p>
       {% endif %}
       {% if snap.empty %}
-      <p class="hito-card__value hito-card__value--empty">Sin partidas aún</p>
+      <p class="hito-card__value hito-card__value--empty">
+        {% if snap.is_manual %}Sin definir{% else %}Sin partidas aún{% endif %}
+      </p>
       {% else %}
       <p class="hito-card__value">{{ snap.value_label }}</p>
       <ul class="hito-card__holders">
         {% for holder in snap.holders %}
         <li>
           <strong>{{ holder.player_name }}</strong>
+          {% if holder.game_id %}
           <span class="meta">
             <a href="{% url 'games:detail' pk=holder.game_id %}">{{ holder.played_on }}</a>
             · {{ holder.victory_points }} PV
-            {% if snap.hito.metric != "max_victory_points" %}
-            · {{ holder.league_points|floatformat:0 }} pts liga
-            {% endif %}
           </span>
+          {% endif %}
         </li>
         {% endfor %}
       </ul>
@@ -136,7 +140,19 @@
 {% endif %}
 
 <section class="section">
-  <h2>Partidas de la liga</h2>
+  <div class="section-heading-row">
+    <h2>Partidas de la liga</h2>
+    <nav class="sort-toggle" aria-label="Orden de partidas">
+      <a href="?sort=newest"
+         class="sort-toggle__btn{% if games_sort == 'newest' %} sort-toggle__btn--active{% endif %}">
+        Más recientes
+      </a>
+      <a href="?sort=oldest"
+         class="sort-toggle__btn{% if games_sort == 'oldest' %} sort-toggle__btn--active{% endif %}">
+        Más antiguas
+      </a>
+    </nav>
+  </div>
   {% if game_entries %}
   <p class="help">Puntuación de liga por jugador en cada partida (PV, puesto y puntos con desglose).</p>
   <div class="league-games-list">

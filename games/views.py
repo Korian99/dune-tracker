@@ -414,13 +414,24 @@ def league_list(request):
     return render(request, "games/league_list.html", {"leagues": leagues})
 
 
+def _league_games_sort(request) -> str:
+    """Return 'oldest' or 'newest' from query string (default newest)."""
+    sort = (request.GET.get("sort") or "newest").strip().lower()
+    return "oldest" if sort == "oldest" else "newest"
+
+
 def league_detail(request, slug):
     from .hitos import league_hito_snapshots
 
     league = get_object_or_404(League, slug=slug)
+    games_sort = _league_games_sort(request)
     games = league.games.select_related(
         "designated_winner__player"
     ).prefetch_related("results__player")
+    if games_sort == "oldest":
+        games = games.order_by("played_on", "created_at")
+    else:
+        games = games.order_by("-played_on", "-created_at")
     scoring_config = resolve_scoring_config(league)
     standings = league_standings(league)
     roster = league.players.order_by("name")
@@ -440,6 +451,7 @@ def league_detail(request, slug):
             "roster": roster,
             "add_player_form": add_player_form,
             "count_games": scoring_config["count_games"],
+            "games_sort": games_sort,
         },
     )
 

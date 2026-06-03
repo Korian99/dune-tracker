@@ -1342,3 +1342,42 @@ h2 {
 .hito-card__holders li:last-child {
   margin-bottom: 0;
 }
+
+.section-heading-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.section-heading-row h2 {
+  margin: 0;
+}
+
+.sort-toggle {
+  display: inline-flex;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.sort-toggle__btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.875rem;
+  text-decoration: none;
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.sort-toggle__btn:hover {
+  color: var(--text);
+  background: #1a222d;
+}
+
+.sort-toggle__btn--active {
+  color: var(--deep);
+  background: var(--spice-bright);
+  font-weight: 600;
+}

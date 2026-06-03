@@ -27,8 +27,16 @@ class LeagueMembershipInline(admin.TabularInline):
 class LeagueHitoInline(admin.TabularInline):
     model = LeagueHito
     extra = 0
-    fields = ("slug", "name", "metric", "order", "is_active", "description")
-    prepopulated_fields = {"slug": ("name",)}
+    fields = (
+        "slug",
+        "name",
+        "metric",
+        "manual_value",
+        "manual_player",
+        "order",
+        "is_active",
+    )
+    autocomplete_fields = ["manual_player"]
 
 
 @admin.register(Player)

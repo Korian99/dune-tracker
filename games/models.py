@@ -116,18 +116,9 @@ class LeagueHito(models.Model):
     """
 
     class Metric(models.TextChoices):
-        MAX_LEAGUE_POINTS = (
-            "max_league_points",
-            "Máx. puntos de liga (una partida)",
-        )
-        MAX_VICTORY_POINTS = (
-            "max_victory_points",
-            "Máx. PV (una partida)",
-        )
-        MIN_LEAGUE_POINTS = (
-            "min_league_points",
-            "Mín. puntos de liga (una partida)",
-        )
+        AUTO_MAX_VP = "auto_max_vp", "Mayor PV (automático)"
+        AUTO_MIN_VP = "auto_min_vp", "Menor PV (automático)"
+        MANUAL = "manual", "Manual"
 
     league = models.ForeignKey(
         League,
@@ -147,6 +138,18 @@ class LeagueHito(models.Model):
         help_text="True for highscore / powerscore / lowscore seeded on create.",
     )
     is_active = models.BooleanField(default=True)
+    manual_value = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Powerscore: texto libre (p. ej. récord o nota de la liga).",
+    )
+    manual_player = models.ForeignKey(
+        Player,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="powerscore_hitos",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

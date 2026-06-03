@@ -86,14 +86,32 @@ class LeagueForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        from .hitos import powerscore_hito
+
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             initial = config_to_form_initial(self.instance.scoring_config or {})
             for key, value in initial.items():
                 self.fields[key].initial = value
+            roster = list(self.instance.players.order_by("name").values_list("name", flat=True))
+            player_choices = [("", "— Sin jugador —")] + [(n, n) for n in roster]
+            ps = powerscore_hito(self.instance)
+            self.fields["powerscore_value"] = forms.CharField(
+                required=False,
+                max_length=120,
+                label="Powerscore",
+                help_text="Récord manual de la liga (texto libre).",
+                initial=ps.manual_value if ps else "",
+            )
+            self.fields["powerscore_player"] = forms.ChoiceField(
+                required=False,
+                label="Jugador (opcional)",
+                choices=player_choices,
+                initial=ps.manual_player.name if ps and ps.manual_player_id else "",
+            )
 
     def save(self, commit=True):
-        from .hitos import ensure_default_hitos
+        from .hitos import ensure_default_hitos, powerscore_hito
 
         league = super().save(commit=False)
         league.scoring_config = config_from_form_data(self.cleaned_data)
@@ -103,6 +121,16 @@ class LeagueForm(forms.ModelForm):
             self.save_m2m()
             if is_new:
                 ensure_default_hitos(league)
+            elif "powerscore_value" in self.cleaned_data:
+                ps = powerscore_hito(league)
+                if ps:
+                    ps.manual_value = self.cleaned_data.get("powerscore_value", "")
+                    player_name = self.cleaned_data.get("powerscore_player", "")
+                    if player_name:
+                        ps.manual_player = resolve_player(player_name, league=league)
+                    else:
+                        ps.manual_player = None
+                    ps.save(update_fields=["manual_value", "manual_player"])
         return league
 
 

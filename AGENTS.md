@@ -62,10 +62,11 @@ README.md         # developer setup (English)
 
 ### `LeagueHito` (UI: **Hitos**)
 
-- Per-league milestone / highscore tracks (`games/hitos.py`).
-- Built-in slugs on league create (migration `0008`): `highscore` (max league points in one game), `powerscore` (max VP), `lowscore` (min league points). Names/descriptions are personalized per league via admin.
-- `metric` — `max_league_points` | `max_victory_points` | `min_league_points`.
-- Holders computed from game results on `league_detail` (not stored rows).
+- Per-league tracks (`games/hitos.py`), three built-ins on league create:
+  - **Highscore** — auto max VP in one game.
+  - **Lowscore** — auto min VP in one game.
+  - **Powerscore** — manual (`manual_value`, optional `manual_player`); edit on **Editar liga**.
+- `metric`: `auto_max_vp` | `auto_min_vp` | `manual`.
 
 ### `Game`
 
