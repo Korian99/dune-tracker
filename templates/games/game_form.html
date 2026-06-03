@@ -3,6 +3,11 @@
 
 {% block title %}{% if is_edit %}Editar{% else %}Registrar{% endif %} partida — Dune Tracker{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'vendor/select2/select2.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/select2-dune.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
   <h1>{% if is_edit %}Editar partida{% else %}Registrar partida{% endif %}</h1>
@@ -51,18 +56,12 @@
           {% for hidden in result_form.hidden_fields %}{{ hidden }}{% endfor %}
           <div class="field">
             {{ result_form.player_pick.label_tag }}
-            <div class="search-select">
-              <input type="text" class="search-select-filter" placeholder="Buscar jugador…" autocomplete="off" aria-label="Filtrar jugadores">
-              {{ result_form.player_pick }}
-            </div>
+            {{ result_form.player_pick }}
             {{ result_form.player_pick.errors }}
           </div>
           <div class="field">
             {{ result_form.leader.label_tag }}
-            <div class="search-select">
-              <input type="text" class="search-select-filter" placeholder="Buscar líder…" autocomplete="off" aria-label="Filtrar líderes">
-              {{ result_form.leader }}
-            </div>
+            {{ result_form.leader }}
             {{ result_form.leader.errors }}
           </div>
           <div class="field field-vp">
@@ -96,10 +95,7 @@
       {% for field in alliance_form %}
       <div class="field">
         {{ field.label_tag }}
-        <div class="search-select">
-          <input type="text" class="search-select-filter" placeholder="Buscar jugador…" autocomplete="off">
-          {{ field }}
-        </div>
+        {{ field }}
         {{ field.errors }}
       </div>
       {% endfor %}
@@ -114,5 +110,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/search-select.js' %}"></script>
+<script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'vendor/select2/select2.min.js' %}"></script>
+<script src="{% static 'vendor/select2/i18n/es.js' %}"></script>
+<script src="{% static 'js/enhanced-selects.js' %}"></script>
 {% endblock %}

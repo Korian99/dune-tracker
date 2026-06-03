@@ -1,0 +1,76 @@
+/* Select2 theme aligned with Dune Tracker */
+
+.select2-container--default .select2-selection--single {
+  min-height: var(--tap-min);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: var(--deep);
+  color: var(--text);
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  color: var(--text);
+  line-height: calc(var(--tap-min) - 2px);
+  padding-left: 0.65rem;
+  padding-right: 2rem;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+  color: var(--muted);
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: calc(var(--tap-min) - 2px);
+  right: 0.5rem;
+}
+
+.select2-container--default.select2-container--open .select2-selection--single {
+  border-color: var(--spice);
+}
+
+.select2-container--default .select2-selection--single .select2-selection__clear {
+  color: var(--muted);
+  margin-right: 0.25rem;
+}
+
+.select2-dropdown {
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: var(--deep);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0.45rem 0.65rem;
+}
+
+.select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+  background: var(--spice);
+  color: var(--deep);
+}
+
+.select2-container--default .select2-results__option--selected {
+  background: rgba(212, 132, 44, 0.2);
+}
+
+.select2-container--default .select2-results__option {
+  padding: 0.5rem 0.65rem;
+}
+
+.select2-container .select2-selection--single .select2-selection__rendered {
+  padding-top: 0;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+  border-color: var(--muted) transparent transparent transparent;
+}
+
+.game-form .select2-container {
+  width: 100% !important;
+}

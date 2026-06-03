@@ -35,7 +35,9 @@ games/            # main app
   scoring.py      # League points (standard + victory_points override)
   urls.py
 templates/games/  # Spanish UI
-static/css/       # style.css
+static/css/       # style.css, select2-dune.css
+static/js/        # enhanced-selects.js (game form only)
+static/vendor/    # jquery, select2 (vendored)
 AGENTS.md         # this file (English)
 README.md         # developer setup (English)
 ```
@@ -71,7 +73,7 @@ README.md         # developer setup (English)
 - `ALLIANCE_FIELDS` — list of `(field_name, Spanish label)` for forms and display
 - Unique per game: `(game, player)`
 
-**Game logging UX:** each result row uses `player_pick` (text + `<datalist>` of league roster). Typing a new name creates a `Player` and adds them to the league roster when the game has a league.
+**Game logging UX:** `GameForm` forces Uprising + Bloodlines. Each result row: `player_pick` and `leader` are `<select>` fields enhanced with **Select2** on `game_form.html` (class `enhanced-select`, init in `static/js/enhanced-selects.js`). Alliance holders use the same widget. Players must be chosen from the roster (league plantel or global `Player` list); add names via the league page first.
 
 ### Migration `0004`
 
@@ -144,7 +146,12 @@ League points per game = `victory_points`; best-N still applies.
 - User strings: Spanish in `forms.py` / templates, not hardcoded in views.
 - Run `python manage.py makemigrations` / `migrate` after model changes.
 - Do not commit secrets, `db.sqlite3`, or `.env`.
-- Commits only when the user asks.
+
+### Git: commit and push
+
+- **Never** commit or push unless the user explicitly asks in that turn.
+- **After finishing work** for a prompt (feature, fix, or doc update), **always ask** whether you should commit and push — e.g. “¿Hago commit y push?” Do not assume yes; wait for confirmation unless they already said to in the same message.
+- When the user asks to commit: stage only relevant files, write a clear English commit message (why, not just what), run `git status` after commit, push only if they asked to push (or said “commit and push”).
 
 ## Local commands
 

@@ -5,7 +5,11 @@ from .leaders import LEADER_CHOICES
 from .models import Game, GameResult, League, Player, resolve_player
 from .scoring import config_from_form_data, config_to_form_initial
 
-SEARCH_SELECT_CLASS = "search-select-native"
+ENHANCED_SELECT_CLASS = "enhanced-select"
+
+
+def _enhanced_select_attrs(placeholder):
+    return {"class": ENHANCED_SELECT_CLASS, "data-placeholder": placeholder}
 
 
 def _player_choices(league=None):
@@ -203,25 +207,25 @@ class GameAllianceForm(forms.Form):
         required=False,
         label="Emperador",
         choices=[],
-        widget=forms.Select(attrs={"class": SEARCH_SELECT_CLASS}),
+        widget=forms.Select(attrs=_enhanced_select_attrs("Nadie")),
     )
     alliance_guild = forms.ChoiceField(
         required=False,
         label="Gremio",
         choices=[],
-        widget=forms.Select(attrs={"class": SEARCH_SELECT_CLASS}),
+        widget=forms.Select(attrs=_enhanced_select_attrs("Nadie")),
     )
     alliance_bene_gesserit = forms.ChoiceField(
         required=False,
         label="Bene Gesserit",
         choices=[],
-        widget=forms.Select(attrs={"class": SEARCH_SELECT_CLASS}),
+        widget=forms.Select(attrs=_enhanced_select_attrs("Nadie")),
     )
     alliance_fremen = forms.ChoiceField(
         required=False,
         label="Fremen",
         choices=[],
-        widget=forms.Select(attrs={"class": SEARCH_SELECT_CLASS}),
+        widget=forms.Select(attrs=_enhanced_select_attrs("Nadie")),
     )
 
     def __init__(self, *args, player_names=None, initial_assignments=None, **kwargs):
@@ -254,13 +258,13 @@ class GameResultForm(forms.ModelForm):
     player_pick = forms.ChoiceField(
         label="Jugador",
         choices=[],
-        widget=forms.Select(attrs={"class": SEARCH_SELECT_CLASS}),
+        widget=forms.Select(attrs=_enhanced_select_attrs("Elige jugador…")),
     )
     leader = forms.ChoiceField(
         required=False,
         label="Líder",
         choices=LEADER_CHOICES,
-        widget=forms.Select(attrs={"class": SEARCH_SELECT_CLASS}),
+        widget=forms.Select(attrs=_enhanced_select_attrs("Elige líder…")),
     )
 
     class Meta:

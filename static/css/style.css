@@ -667,45 +667,6 @@ h2 {
   max-width: 100%;
 }
 
-.search-select {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.search-select-filter {
-  width: 100%;
-  padding: 0.5rem 0.65rem;
-  border-radius: 6px;
-  border: 1px solid var(--panel-border);
-  background: var(--deep);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 1rem;
-  min-height: var(--tap-min);
-}
-
-.search-select-native {
-  width: 100%;
-  min-height: var(--tap-min);
-  padding: 0.5rem 0.65rem;
-  border-radius: 6px;
-  border: 1px solid var(--panel-border);
-  background: var(--deep);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 1rem;
-}
-
-.search-select--open .search-select-native {
-  border-color: var(--spice);
-}
-
-.search-select--empty .search-select-filter {
-  border-color: var(--danger);
-}
-
 .stats-filter {
   margin-bottom: 1.5rem;
 }
