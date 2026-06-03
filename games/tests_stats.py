@@ -1,0 +1,76 @@
+from datetime import date
+
+from django.test import RequestFactory, TestCase
+
+from .models import Game, GameResult, League, Player, resolve_player
+from .stats_queries import (
+    aggregate_leader_stats,
+    aggregate_player_stats,
+    filter_scope_label,
+    games_for_filter,
+    stats_for_filter,
+)
+
+
+class StatsQueriesTests(TestCase):
+    def setUp(self):
+        self.league = League.objects.create(name="Liga A", slug="liga-a")
+        self.player_a = resolve_player("Ana", league=self.league)
+        self.player_b = resolve_player("Bob", league=self.league)
+
+    def _game(self, league=None):
+        return Game.objects.create(
+            league=league,
+            played_on=date.today(),
+            player_count=2,
+            base_game=Game.BaseGame.UPRISING,
+            bloodlines=True,
+        )
+
+    def test_filter_single_league(self):
+        g = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g, player=self.player_a, leader="Muad'Dib", victory_points=10, order=0
+        )
+        GameResult.objects.create(
+            game=g, player=self.player_b, leader="Chani", victory_points=5, order=1
+        )
+        qs = games_for_filter(["liga-a"], False)
+        self.assertEqual(qs.count(), 1)
+
+    def test_leader_stats_win_rate_and_placement(self):
+        g = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g, player=self.player_a, leader="Muad'Dib", victory_points=10, order=0
+        )
+        GameResult.objects.create(
+            game=g, player=self.player_b, leader="Muad'Dib", victory_points=5, order=1
+        )
+        g2 = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g2, player=self.player_a, leader="Chani", victory_points=8, order=0
+        )
+        GameResult.objects.create(
+            game=g2, player=self.player_b, leader="Chani", victory_points=12, order=1
+        )
+        results = GameResult.objects.filter(game__league=self.league)
+        leaders = {r["leader"]: r for r in aggregate_leader_stats(results)}
+        self.assertEqual(leaders["Muad'Dib"]["times_played"], 2)
+        self.assertEqual(leaders["Muad'Dib"]["wins"], 1)
+        self.assertEqual(leaders["Muad'Dib"]["win_rate"], 50.0)
+        self.assertEqual(leaders["Chani"]["wins"], 1)
+
+    def test_stats_for_filter_uses_league_standings_when_one_league(self):
+        g = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g, player=self.player_a, victory_points=10, order=0
+        )
+        GameResult.objects.create(
+            game=g, player=self.player_b, victory_points=5, order=1
+        )
+        data = stats_for_filter(["liga-a"], False)
+        self.assertTrue(data["use_league_scoring"])
+        self.assertEqual(len(data["player_rows"]), 2)
+
+    def test_scope_label_all(self):
+        self.assertEqual(filter_scope_label([], False), "Todas las partidas")

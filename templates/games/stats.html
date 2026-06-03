@@ -4,17 +4,43 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>Estadísticas{% if current_league %} — {{ current_league.name }}{% endif %}</h1>
+  <h1>Estadísticas</h1>
+  <p class="meta">Ámbito: {{ scope_label }}</p>
 </div>
 
-<div class="filter-bar">
-  <span>Ámbito:</span>
-  <a href="{% url 'games:stats' %}" class="{% if not current_league %}active{% endif %}">Todas las partidas</a>
-  {% for league in leagues %}
-    <a href="{% url 'games:stats' %}?league={{ league.slug }}"
-       class="{% if current_league and current_league.slug == league.slug %}active{% endif %}">{{ league.name }}</a>
-  {% endfor %}
-</div>
+<form method="get" class="stats-filter game-form">
+  <fieldset class="form-section">
+    <legend>Filtrar partidas</legend>
+    <p class="help">Sin marcar ninguna opción se incluyen <strong>todas</strong> las partidas. Puedes combinar ligas y partidas sin liga.</p>
+
+    <div class="stats-filter-grid">
+      <div class="stats-filter-group">
+        <span class="field-label">Ligas</span>
+        {% for league in all_leagues %}
+        <label class="filter-check">
+          <input type="checkbox" name="leagues" value="{{ league.slug }}"
+            {% if league.slug in selected_league_slugs %}checked{% endif %}>
+          {{ league.name }}
+        </label>
+        {% empty %}
+        <p class="help">No hay ligas creadas.</p>
+        {% endfor %}
+      </div>
+      <div class="stats-filter-group">
+        <span class="field-label">Otras</span>
+        <label class="filter-check">
+          <input type="checkbox" name="casual" value="1" {% if include_casual %}checked{% endif %}>
+          Partidas sin liga
+        </label>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Aplicar filtro</button>
+      <a href="{% url 'games:stats' %}" class="btn btn-ghost">Ver todo</a>
+    </div>
+  </fieldset>
+</form>
 
 <div class="stat-cards">
   <div class="stat-card">
@@ -39,25 +65,26 @@
   {% endif %}
 </div>
 
-{% if current_league and league_standings %}
+{% if use_league_scoring and league_standings %}
 <section class="section">
-  <h2>Clasificación de la liga</h2>
-  {% if current_league.scoring_notes %}
-    <p class="scoring-notes">{{ current_league.scoring_notes|linebreaksbr }}</p>
-  {% else %}
-    <p class="help">Clasificación según los parámetros de la liga (mejores partidas que cuentan).</p>
+  <h2>Clasificación — {{ single_league.name }}</h2>
+  {% if single_league.scoring_notes %}
+    <p class="scoring-notes">{{ single_league.scoring_notes|linebreaksbr }}</p>
+  {% elif count_games %}
+    <p class="help">Puntuación de liga: cuentan las mejores {{ count_games }} partidas.</p>
   {% endif %}
   <div class="table-wrap">
-    <table class="data-table data-table--cards">
+    <table class="data-table data-table--cards leaderboard-table">
       <thead>
         <tr>
           <th>#</th>
           <th>Jugador</th>
-          <th>Pts. liga</th>
-          <th>Bonos</th>
           <th>Victorias</th>
-          <th>Cuentan</th>
-          <th>PV med.</th>
+          <th>Partidas</th>
+          <th>Puntos total</th>
+          <th>{% if count_games %}Mejor {{ count_games }}{% else %}Puntos{% endif %}</th>
+          <th>% Victorias</th>
+          <th>Puntos prom.</th>
         </tr>
       </thead>
       <tbody>
@@ -65,16 +92,46 @@
         <tr>
           <td data-label="#">{{ forloop.counter }}</td>
           <td data-label="Jugador"><strong>{{ row.player_name }}</strong></td>
-          <td data-label="Pts. liga">{{ row.league_points }}</td>
-          <td data-label="Bonos" class="meta">
-            {% if row.early_wins %}<span title="Victorias tempranas">⚡{{ row.early_wins }}</span>{% endif %}
-            {% if row.vp_bonuses %}<span title="Bonos por PV">★{{ row.vp_bonuses }}</span>{% endif %}
-            {% if not row.early_wins and not row.vp_bonuses %}—{% endif %}
-          </td>
           <td data-label="Victorias">{{ row.wins }}</td>
-          <td data-label="Cuentan">
-            {{ row.games }}{% if row.games_discarded %} / {{ row.games_played }}{% endif %}
+          <td data-label="Partidas">
+            {{ row.games_played }}
+            {% if row.games_discarded %}<span class="meta">({{ row.games }} cuentan)</span>{% endif %}
           </td>
+          <td data-label="Puntos total">{{ row.score_total }}</td>
+          <td data-label="Puntos"><strong>{{ row.score_best_n }}</strong></td>
+          <td data-label="% Victorias">{{ row.win_rate }}%</td>
+          <td data-label="Puntos prom.">{{ row.score_average }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% elif player_rows %}
+<section class="section">
+  <h2>Ranking de jugadores</h2>
+  <div class="table-wrap">
+    <table class="data-table data-table--cards leaderboard-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Jugador</th>
+          <th>Victorias</th>
+          <th>Partidas</th>
+          <th>% Victorias</th>
+          <th>Puesto habitual</th>
+          <th>PV med.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in player_rows %}
+        <tr>
+          <td data-label="#">{{ forloop.counter }}</td>
+          <td data-label="Jugador"><strong>{{ row.name }}</strong></td>
+          <td data-label="Victorias">{{ row.wins }}</td>
+          <td data-label="Partidas">{{ row.games }}</td>
+          <td data-label="% Victorias">{{ row.win_rate }}%</td>
+          <td data-label="Puesto habitual">{{ row.usual_placement }} <span class="meta">({{ row.avg_placement }})</span></td>
           <td data-label="PV med.">{{ row.avg_vp }}</td>
         </tr>
         {% endfor %}
@@ -84,61 +141,39 @@
 </section>
 {% endif %}
 
-{% if standings %}
-<h2>Ranking de jugadores</h2>
-<div class="table-wrap">
-  <table class="data-table data-table--cards">
-    <thead>
-      <tr>
-        <th>Jugador</th>
-        <th>Victorias</th>
-        <th>Partidas</th>
-        <th>% victorias</th>
-        <th>PV med.</th>
-        <th>Sardaukar med.</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in standings %}
-      <tr>
-        <td data-label="Jugador"><strong>{{ row.name }}</strong></td>
-        <td data-label="Victorias">{{ row.wins }}</td>
-        <td data-label="Partidas">{{ row.games }}</td>
-        <td data-label="% victorias">{{ row.win_rate }}%</td>
-        <td data-label="PV med.">{{ row.avg_vp }}</td>
-        <td data-label="Sardaukar med.">{{ row.avg_sardaukar }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+{% if leader_rows %}
+<section class="section">
+  <h2>Estadísticas de líderes</h2>
+  <div class="table-wrap">
+    <table class="data-table data-table--cards">
+      <thead>
+        <tr>
+          <th>Líder</th>
+          <th>Partidas</th>
+          <th>Victorias</th>
+          <th>% Victorias</th>
+          <th>Puesto habitual</th>
+          <th>PV med.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in leader_rows %}
+        <tr>
+          <td data-label="Líder"><strong>{{ row.leader }}</strong></td>
+          <td data-label="Partidas">{{ row.times_played }}</td>
+          <td data-label="Victorias">{{ row.wins }}</td>
+          <td data-label="% Victorias">{{ row.win_rate }}%</td>
+          <td data-label="Puesto habitual">{{ row.usual_placement }} <span class="meta">({{ row.avg_placement }})</span></td>
+          <td data-label="PV med.">{{ row.avg_vp }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
 {% endif %}
 
-{% if leader_usage %}
-<h2>Líderes jugados</h2>
-<div class="table-wrap">
-  <table class="data-table data-table--cards">
-    <thead>
-      <tr>
-        <th>Líder</th>
-        <th>Veces</th>
-        <th>PV med.</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in leader_usage %}
-      <tr>
-        <td data-label="Líder">{{ row.leader }}</td>
-        <td data-label="Veces">{{ row.times_played }}</td>
-        <td data-label="PV med.">{{ row.avg_vp|floatformat:1 }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
-
-{% if not standings %}
-<p class="empty">Juega algunas partidas para ver estadísticas aquí.</p>
+{% if not player_rows and not leader_rows %}
+<p class="empty">No hay partidas en este ámbito. Cambia el filtro o <a href="{% url 'games:create' %}">registra una partida</a>.</p>
 {% endif %}
 {% endblock %}

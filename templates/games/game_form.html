@@ -1,26 +1,16 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{% if is_edit %}Editar{% else %}Registrar{% endif %} partida — Dune Tracker{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <h1>{% if is_edit %}Editar partida{% else %}Registrar partida{% endif %}</h1>
+  <p class="meta">Dune: Imperium — Uprising · Bloodlines</p>
 </div>
 
-<form method="post" class="game-form">
+<form method="post" class="game-form" id="game-form">
   {% csrf_token %}
-  {% if roster_names %}
-  <datalist id="roster-players">
-    {% for name in roster_names %}
-      <option value="{{ name }}">
-    {% endfor %}
-  </datalist>
-  {% endif %}
-  <datalist id="leader-suggestions">
-    {% for leader in leader_suggestions %}
-      <option value="{{ leader }}">
-    {% endfor %}
-  </datalist>
 
   <fieldset class="form-section">
     <legend>Sesión</legend>
@@ -61,12 +51,18 @@
           {% for hidden in result_form.hidden_fields %}{{ hidden }}{% endfor %}
           <div class="field">
             {{ result_form.player_pick.label_tag }}
-            {{ result_form.player_pick }}
+            <div class="search-select">
+              <input type="text" class="search-select-filter" placeholder="Buscar jugador…" autocomplete="off" aria-label="Filtrar jugadores">
+              {{ result_form.player_pick }}
+            </div>
             {{ result_form.player_pick.errors }}
           </div>
           <div class="field">
             {{ result_form.leader.label_tag }}
-            {{ result_form.leader }}
+            <div class="search-select">
+              <input type="text" class="search-select-filter" placeholder="Buscar líder…" autocomplete="off" aria-label="Filtrar líderes">
+              {{ result_form.leader }}
+            </div>
             {{ result_form.leader.errors }}
           </div>
           <div class="field field-vp">
@@ -79,24 +75,35 @@
             {{ result_form.sardaukar_count }}
             {{ result_form.sardaukar_count.errors }}
           </div>
-          <div class="field field-alliances">
-            <span class="field-label">Alianzas</span>
-            <div class="alliance-checks">
-              <label>{{ result_form.alliance_emperor }} Emperador</label>
-              <label>{{ result_form.alliance_guild }} Gremio</label>
-              <label>{{ result_form.alliance_bene_gesserit }} Bene Gesserit</label>
-              <label>{{ result_form.alliance_fremen }} Fremen</label>
-            </div>
-          </div>
           {% if result_form.DELETE %}
             <div class="field field-delete">
-              <label>{{ result_form.DELETE }} Quitar</label>
+              <label>{{ result_form.DELETE }} Quitar fila</label>
             </div>
           {% endif %}
         </div>
       {% endfor %}
     </div>
-    <p class="help">Mínimo dos jugadores. Elige del plantel de la liga o escribe un nombre nuevo (se añadirá al plantel). Cada alianza de facción solo puede asignarse a un jugador.</p>
+    <p class="help">Mínimo dos jugadores. Añade jugadores al plantel de la liga si no aparecen en la lista.</p>
+  </fieldset>
+
+  <fieldset class="form-section alliance-section">
+    <legend>Alianzas de la partida</legend>
+    <p class="help">Asigna cada alianza a un solo jugador (opcional). Solo los jugadores de las filas anteriores.</p>
+    {% if alliance_form.non_field_errors %}
+      <div class="form-errors">{{ alliance_form.non_field_errors }}</div>
+    {% endif %}
+    <div class="alliance-grid">
+      {% for field in alliance_form %}
+      <div class="field">
+        {{ field.label_tag }}
+        <div class="search-select">
+          <input type="text" class="search-select-filter" placeholder="Buscar jugador…" autocomplete="off">
+          {{ field }}
+        </div>
+        {{ field.errors }}
+      </div>
+      {% endfor %}
+    </div>
   </fieldset>
 
   <div class="form-actions">
@@ -104,4 +111,8 @@
     <a href="{% if is_edit %}{% url 'games:detail' pk=game.pk %}{% else %}{% url 'games:home' %}{% endif %}" class="btn btn-ghost">Cancelar</a>
   </div>
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/search-select.js' %}"></script>
 {% endblock %}

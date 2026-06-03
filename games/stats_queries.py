@@ -1,0 +1,169 @@
+"""
+Aggregate player and leader statistics for filtered game sets.
+"""
+
+from collections import defaultdict
+
+from django.db.models import Avg, Count, Q
+
+from .models import Game, GameResult, League
+from .scoring import league_standings
+
+
+def parse_stats_filter(request) -> tuple[list[str], bool]:
+    """Return (league_slugs, include_casual) from GET params."""
+    league_slugs = [s for s in request.GET.getlist("leagues") if s.strip()]
+    include_casual = request.GET.get("casual") == "1"
+    return league_slugs, include_casual
+
+
+def games_for_filter(league_slugs: list[str], include_casual: bool):
+    """Games queryset matching league / casual filter. Empty slugs + no casual = all."""
+    if not league_slugs and not include_casual:
+        return Game.objects.all()
+    q = Q()
+    if league_slugs:
+        q |= Q(league__slug__in=league_slugs)
+    if include_casual:
+        q |= Q(league__isnull=True)
+    return Game.objects.filter(q)
+
+
+def filter_scope_label(league_slugs: list[str], include_casual: bool) -> str:
+    if not league_slugs and not include_casual:
+        return "Todas las partidas"
+    parts = []
+    if league_slugs:
+        names = list(
+            League.objects.filter(slug__in=league_slugs)
+            .order_by("name")
+            .values_list("name", flat=True)
+        )
+        parts.extend(names)
+    if include_casual:
+        parts.append("Partidas sin liga")
+    return " · ".join(parts)
+
+
+def results_for_games(games_qs):
+    return GameResult.objects.filter(game__in=games_qs).select_related(
+        "game", "player", "game__league"
+    )
+
+
+def _format_placement(avg: float) -> str:
+    if avg <= 1.4:
+        return "1.º"
+    if avg <= 2.4:
+        return "2.º"
+    if avg <= 3.4:
+        return "3.º"
+    if avg <= 4.4:
+        return "4.º"
+    return f"{avg:.1f}.º"
+
+
+def aggregate_player_stats(results) -> list[dict]:
+    """Player leaderboard for a flat result set (no league best-N rules)."""
+    by_player: dict[str, list] = defaultdict(list)
+    for result in results:
+        by_player[result.player.name].append(result)
+
+    rows = []
+    for name, game_results in by_player.items():
+        games_played = len(game_results)
+        wins = sum(1 for r in game_results if r.is_winner)
+        vp_sum = sum(r.victory_points for r in game_results)
+        placement_sum = sum(r.placement for r in game_results)
+        avg_placement = placement_sum / games_played if games_played else 0
+        rows.append(
+            {
+                "name": name,
+                "games": games_played,
+                "wins": wins,
+                "win_rate": round(100 * wins / games_played, 1) if games_played else 0,
+                "avg_vp": round(vp_sum / games_played, 1) if games_played else 0,
+                "avg_placement": round(avg_placement, 1),
+                "usual_placement": _format_placement(avg_placement),
+            }
+        )
+    rows.sort(key=lambda r: (-r["wins"], -r["win_rate"], -r["avg_vp"]))
+    return rows
+
+
+def aggregate_leader_stats(results) -> list[dict]:
+    """Per-leader: times played, wins, win rate, average placement, average VP."""
+    by_leader: dict[str, list] = defaultdict(list)
+    for result in results:
+        leader = (result.leader or "").strip()
+        if leader:
+            by_leader[leader].append(result)
+
+    rows = []
+    for leader, game_results in by_leader.items():
+        times = len(game_results)
+        wins = sum(1 for r in game_results if r.is_winner)
+        vp_sum = sum(r.victory_points for r in game_results)
+        placement_sum = sum(r.placement for r in game_results)
+        avg_placement = placement_sum / times if times else 0
+        rows.append(
+            {
+                "leader": leader,
+                "times_played": times,
+                "wins": wins,
+                "win_rate": round(100 * wins / times, 1) if times else 0,
+                "avg_vp": round(vp_sum / times, 1) if times else 0,
+                "avg_placement": round(avg_placement, 1),
+                "usual_placement": _format_placement(avg_placement),
+            }
+        )
+    rows.sort(key=lambda r: (-r["times_played"], -r["win_rate"], -r["avg_placement"]))
+    return rows
+
+
+def stats_for_filter(league_slugs: list[str], include_casual: bool):
+    """
+    Build player rows, leader rows, summary, and optional single-league standings.
+    """
+    games_qs = games_for_filter(league_slugs, include_casual)
+    results = results_for_games(games_qs)
+    scope_label = filter_scope_label(league_slugs, include_casual)
+
+    summary = games_qs.aggregate(
+        total=Count("id"),
+        with_bloodlines=Count("id", filter=Q(bloodlines=True)),
+        avg_rounds=Avg("rounds"),
+        avg_duration=Avg("duration_minutes"),
+    )
+
+    league_standings_rows = None
+    count_games = None
+    single_league = None
+
+    if len(league_slugs) == 1 and not include_casual:
+        single_league = League.objects.filter(slug=league_slugs[0]).first()
+        if single_league:
+            from .scoring import resolve_scoring_config
+
+            league_standings_rows = league_standings(single_league)
+            count_games = resolve_scoring_config(single_league)["count_games"]
+            player_rows = league_standings_rows
+        else:
+            player_rows = aggregate_player_stats(results)
+    else:
+        player_rows = aggregate_player_stats(results)
+
+    leader_rows = aggregate_leader_stats(results)
+
+    return {
+        "scope_label": scope_label,
+        "summary": summary,
+        "player_rows": player_rows,
+        "leader_rows": leader_rows,
+        "league_standings": league_standings_rows,
+        "count_games": count_games,
+        "single_league": single_league,
+        "use_league_scoring": league_standings_rows is not None,
+        "league_slugs": league_slugs,
+        "include_casual": include_casual,
+    }

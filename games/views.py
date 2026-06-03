@@ -1,17 +1,17 @@
-from collections import Counter
 from datetime import date
 
 from django.contrib import messages
-from django.db.models import Avg, Count, Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
 from .forms import (
+    GameAllianceForm,
     GameForm,
     GameResultFormSet,
-    LEADER_SUGGESTIONS,
     LeagueAddPlayerForm,
     LeagueForm,
+    _player_choice_list,
 )
 from .models import Game, GameResult, League
 from .scoring import (
@@ -23,12 +23,63 @@ from .scoring import (
 )
 
 
-def _save_results(formset):
+def _save_results(formset, alliance_form=None):
     results = formset.save()
     for i, result in enumerate(results):
         if result.order != i:
             result.order = i
             result.save(update_fields=["order"])
+    if alliance_form and alliance_form.is_valid():
+        _apply_alliances(results, alliance_form.cleaned_data)
+    return results
+
+
+def _apply_alliances(results, alliance_data):
+    fields = [f for f, _ in GameResult.ALLIANCE_FIELDS]
+    for result in results:
+        for field in fields:
+            setattr(result, field, False)
+    by_name = {r.player.name: r for r in results}
+    for field, _label in GameResult.ALLIANCE_FIELDS:
+        holder = (alliance_data.get(field) or "").strip()
+        if holder and holder in by_name:
+            setattr(by_name[holder], field, True)
+    for result in results:
+        result.save(update_fields=fields)
+
+
+def _alliance_initial_from_game(game):
+    initial = {}
+    for result in game.results.select_related("player"):
+        for field, _label in GameResult.ALLIANCE_FIELDS:
+            if getattr(result, field):
+                initial[field] = result.player.name
+    return initial
+
+
+def _alliance_form_for_request(request, formset, game=None, league=None):
+    """Build alliance form; on POST use submitted player rows for choices."""
+    league = league or (game.league if game and game.league_id else None)
+    if request.method == "POST":
+        names = []
+        total = int(request.POST.get("results-TOTAL_FORMS", 0))
+        for i in range(total):
+            val = request.POST.get(f"results-{i}-player_pick", "").strip()
+            if val:
+                names.append(val)
+        if not names:
+            names = _player_choice_list(league)
+        initial = {
+            field: request.POST.get(field, "").strip()
+            for field, _ in GameResult.ALLIANCE_FIELDS
+            if request.POST.get(field, "").strip()
+        }
+        return GameAllianceForm(
+            request.POST, player_names=names, initial_assignments=initial or None
+        )
+    names = _player_choice_list(league)
+    initial = _alliance_initial_from_game(game) if game else None
+    return GameAllianceForm(player_names=names, initial_assignments=initial)
 
 
 def _games_queryset(league_slug=None):
@@ -38,14 +89,6 @@ def _games_queryset(league_slug=None):
     if league_slug:
         qs = qs.filter(league__slug=league_slug)
     return qs
-
-
-def _roster_names(league):
-    if not league:
-        return []
-    return list(
-        league.players.order_by("name").values_list("name", flat=True)
-    )
 
 
 def _formset_for_game(game=None, league=None, data=None):
@@ -141,37 +184,41 @@ def game_create(request):
 
     if request.method == "POST":
         form = GameForm(request.POST)
-        league_for_formset = (
-            form.cleaned_data.get("league")
-            if form.is_valid()
-            else _league_from_form(form) or initial_league
-        )
+        league_for_formset = _league_from_form(form) or initial_league
+        if form.is_valid():
+            league_for_formset = form.cleaned_data.get("league") or league_for_formset
         formset = _formset_for_game(league=league_for_formset, data=request.POST)
-        if form.is_valid() and formset.is_valid():
+        alliance_form = _alliance_form_for_request(
+            request, formset, league=league_for_formset
+        )
+        if form.is_valid() and formset.is_valid() and alliance_form.is_valid():
             game = form.save()
             formset.instance = game
             formset.league = game.league
             for f in formset.forms:
                 f.league = game.league
-            _save_results(formset)
+            _save_results(formset, alliance_form)
             return redirect("games:detail", pk=game.pk)
     else:
-        initial = {"played_on": date.today(), "bloodlines": True}
+        initial = {
+            "played_on": date.today(),
+            "player_count": Game.PlayerCount.FOUR,
+        }
         if initial_league:
             initial["league"] = initial_league
         form = GameForm(initial=initial)
         formset = _formset_for_game(league=initial_league)
+        alliance_form = _alliance_form_for_request(
+            request, formset, league=initial_league
+        )
 
-    roster_names = _roster_names(initial_league or _league_from_form(form))
     return render(
         request,
         "games/game_form.html",
         {
             "form": form,
             "formset": formset,
-            "leader_suggestions": LEADER_SUGGESTIONS,
-            "alliance_fields": GameResult.ALLIANCE_FIELDS,
-            "roster_names": roster_names,
+            "alliance_form": alliance_form,
             "is_edit": False,
         },
     )
@@ -179,7 +226,10 @@ def game_create(request):
 
 def _league_from_form(form):
     if not form.is_bound:
-        return form.initial.get("league")
+        league = form.initial.get("league")
+        if league:
+            return league
+        return None
     league = form.data.get("league") or form.initial.get("league")
     if league:
         try:
@@ -195,16 +245,18 @@ def game_edit(request, pk):
     if request.method == "POST":
         form = GameForm(request.POST, instance=game)
         formset = _formset_for_game(game=game, data=request.POST)
-        if form.is_valid() and formset.is_valid():
+        alliance_form = _alliance_form_for_request(request, formset, game=game)
+        if form.is_valid() and formset.is_valid() and alliance_form.is_valid():
             game = form.save()
             formset.league = game.league
             for f in formset.forms:
                 f.league = game.league
-            _save_results(formset)
+            _save_results(formset, alliance_form)
             return redirect("games:detail", pk=game.pk)
     else:
         form = GameForm(instance=game)
         formset = _formset_for_game(game=game)
+        alliance_form = _alliance_form_for_request(request, formset, game=game)
 
     return render(
         request,
@@ -212,9 +264,7 @@ def game_edit(request, pk):
         {
             "form": form,
             "formset": formset,
-            "leader_suggestions": LEADER_SUGGESTIONS,
-            "alliance_fields": GameResult.ALLIANCE_FIELDS,
-            "roster_names": _roster_names(game.league),
+            "alliance_form": alliance_form,
             "is_edit": True,
             "game": game,
         },
@@ -229,74 +279,33 @@ def game_delete(request, pk):
 
 
 def stats(request):
-    league_slug = request.GET.get("league")
-    games_qs = Game.objects.all()
-    if league_slug:
-        games_qs = games_qs.filter(league__slug=league_slug)
-        current_league = get_object_or_404(League, slug=league_slug)
-    else:
-        current_league = None
+    from .stats_queries import parse_stats_filter, stats_for_filter
 
-    results = GameResult.objects.filter(game__in=games_qs).select_related(
-        "player", "game"
-    )
-    player_wins = Counter()
-    player_games = Counter()
-    for r in results:
-        player_games[r.player_id] += 1
-        if r.is_winner:
-            player_wins[r.player_id] += 1
+    league_slugs, include_casual = parse_stats_filter(request)
+    # Legacy single-league links: ?league=slug
+    legacy_slug = request.GET.get("league")
+    if legacy_slug and legacy_slug not in league_slugs:
+        league_slugs = [legacy_slug]
+        include_casual = False
 
-    standings = []
-    for player_id, games_played in player_games.most_common():
-        player_results = results.filter(player_id=player_id)
-        name = player_results.first().player.name
-        wins = player_wins[player_id]
-        avg_vp = player_results.aggregate(avg=Avg("victory_points"))["avg"]
-        avg_sard = player_results.aggregate(avg=Avg("sardaukar_count"))["avg"]
-        standings.append(
-            {
-                "name": name,
-                "games": games_played,
-                "wins": wins,
-                "win_rate": round(100 * wins / games_played, 1) if games_played else 0,
-                "avg_vp": round(avg_vp, 1) if avg_vp else 0,
-                "avg_sardaukar": round(avg_sard, 1) if avg_sard else 0,
-            }
-        )
-    standings.sort(key=lambda x: (-x["wins"], -x["avg_vp"]))
-
-    leader_usage = (
-        results.exclude(leader="")
-        .values("leader")
-        .annotate(times_played=Count("id"), avg_vp=Avg("victory_points"))
-        .order_by("-times_played")[:12]
-    )
-
-    summary = games_qs.aggregate(
-        total=Count("id"),
-        with_bloodlines=Count("id", filter=Q(bloodlines=True)),
-        avg_rounds=Avg("rounds"),
-        avg_duration=Avg("duration_minutes"),
-    )
-
-    league_standings_rows = None
-    count_games = None
-    if current_league:
-        league_standings_rows = league_standings(current_league)
-        count_games = resolve_scoring_config(current_league)["count_games"]
+    data = stats_for_filter(league_slugs, include_casual)
+    all_leagues = League.objects.order_by("name")
 
     return render(
         request,
         "games/stats.html",
         {
-            "standings": standings,
-            "leader_usage": leader_usage,
-            "summary": summary,
-            "leagues": League.objects.all(),
-            "current_league": current_league,
-            "league_standings": league_standings_rows,
-            "count_games": count_games,
+            "all_leagues": all_leagues,
+            "selected_league_slugs": set(data["league_slugs"]),
+            "include_casual": data["include_casual"],
+            "scope_label": data["scope_label"],
+            "summary": data["summary"],
+            "player_rows": data["player_rows"],
+            "leader_rows": data["leader_rows"],
+            "league_standings": data["league_standings"],
+            "count_games": data["count_games"],
+            "use_league_scoring": data["use_league_scoring"],
+            "single_league": data["single_league"],
         },
     )
 
@@ -333,13 +342,10 @@ def league_add_player(request, slug):
     form = LeagueAddPlayerForm(request.POST)
     if form.is_valid():
         player = form.save(league)
-        messages.success(
-            request,
-            f"«{player.name}» añadido al plantel de {league.name}.",
-        )
+        messages.success(request, f"«{player.name}» añadido al plantel.")
     else:
-        for err in form.errors.values():
-            messages.error(request, err[0])
+        for err in form.errors.get("name", []):
+            messages.error(request, err)
     return redirect("games:league_detail", slug=slug)
 
 

@@ -87,7 +87,7 @@ README.md         # developer setup (English)
 | `/games/<id>/` | `detail` | Game detail |
 | `/games/<id>/edit/` | `edit` | Edit |
 | `/games/<id>/delete/` | `delete` | POST delete |
-| `/stats/` | `stats` | Stats (`?league=slug`) |
+| `/stats/` | `stats` | Stats explorer (`?leagues=slug&casual=1`; legacy `?league=slug`) |
 | `/leagues/` | `league_list` | Leagues |
 | `/leagues/new/` | `league_create` | Create league |
 | `/leagues/<slug>/` | `league_detail` | League + roster + standings |
@@ -101,6 +101,7 @@ Implemented in `games/scoring.py`:
 - `compute_league_points(result, league)` — total points for one player in one game
 - `compute_league_points_breakdown(result, league)` — components (placement, bonuses)
 - `league_standings(league)` — aggregated table sorted by points, wins, avg VP
+- `games/stats_queries.py` — `stats_for_filter()`, player/leader aggregates for filtered games
 
 ### Standard system (default)
 
