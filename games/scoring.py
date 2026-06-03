@@ -170,6 +170,27 @@ def breakdown_display(breakdown: LeaguePointsBreakdown) -> str:
     return "+".join(parts) + f"={total_str}"
 
 
+def game_score_summary(game, league: League) -> list[dict[str, Any]]:
+    """Per-player league scoring for one game, sorted by placement."""
+    rows = []
+    results = list(game.results.select_related("player"))
+    results.sort(key=lambda r: (r.placement, r.pk))
+    for result in results:
+        breakdown = compute_league_points_breakdown(result, league)
+        total = breakdown["total"]
+        rows.append(
+            {
+                "player_name": result.player.name,
+                "placement": result.placement,
+                "victory_points": result.victory_points,
+                "league_points": int(total) if total == int(total) else total,
+                "formula": breakdown_display(breakdown),
+                "is_winner": result.is_winner,
+            }
+        )
+    return rows
+
+
 def _select_counted_scores(
     per_game: list[tuple[float, GameResult, LeaguePointsBreakdown]],
     count_games: int,

@@ -11,6 +11,7 @@ from .scoring import (
     compute_league_points_breakdown,
     config_from_form_data,
     default_scoring_config,
+    game_score_summary,
     league_standings,
     resolve_scoring_config,
 )
@@ -49,6 +50,17 @@ class LeagueScoringTests(TestCase):
         self.assertEqual(compute_league_points(results["B"], self.league), 4.0)
         self.assertEqual(compute_league_points(results["C"], self.league), 2.0)
         self.assertEqual(compute_league_points(results["D"], self.league), 1.0)
+
+    def test_game_score_summary_lists_all_players(self):
+        self._result("A", 12)
+        self._result("B", 8)
+        rows = game_score_summary(self.game, self.league)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["player_name"], "A")
+        self.assertEqual(rows[0]["placement"], 1)
+        self.assertEqual(rows[0]["victory_points"], 12)
+        self.assertGreater(rows[0]["league_points"], 0)
+        self.assertIn("=", rows[0]["formula"])
 
     def test_winner_round_five_twelve_vp_eight_points(self):
         r = self._result("Winner", 12)

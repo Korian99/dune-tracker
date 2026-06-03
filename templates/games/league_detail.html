@@ -101,37 +101,49 @@
 
 <section class="section">
   <h2>Partidas de la liga</h2>
-  {% if games %}
-  <div class="table-wrap">
-    <table class="data-table data-table--cards">
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Rondas</th>
-          <th>Duración</th>
-          <th>Ganador</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for game in games %}
-        <tr>
-          <td data-label="Fecha">{{ game.played_on }}</td>
-          <td data-label="Rondas">{{ game.rounds|default:"—" }}</td>
-          <td data-label="Duración">{{ game.formatted_duration|default:"—" }}</td>
-          <td data-label="Ganador">
-            {% with w=game.winner %}
-              {% if w %}{{ w.player.name }} ({{ w.victory_points }} PV){% else %}—{% endif %}
-            {% endwith %}
-          </td>
-          <td data-label="" class="row-actions">
-            <a href="{% url 'games:detail' pk=game.pk %}">Detalle</a>
-            · <a href="{% url 'games:edit' pk=game.pk %}">Editar</a>
-          </td>
-        </tr>
+  {% if game_entries %}
+  <p class="help">Puntuación de liga por jugador en cada partida (PV, puesto y puntos con desglose).</p>
+  <div class="league-games-list">
+    {% for entry in game_entries %}
+    {% with game=entry.game %}
+    <article class="league-game-card">
+      <div class="league-game-card__header">
+        <div>
+          <a href="{% url 'games:detail' pk=game.pk %}" class="league-game-card__date">{{ game.played_on }}</a>
+          <p class="meta">
+            {% if game.rounds %}{{ game.rounds }} rondas{% endif %}
+            {% if game.rounds and game.formatted_duration %} · {% endif %}
+            {% if game.formatted_duration %}{{ game.formatted_duration }}{% endif %}
+            {% if not game.rounds and not game.formatted_duration %}—{% endif %}
+          </p>
+        </div>
+        <div class="row-actions">
+          <a href="{% url 'games:detail' pk=game.pk %}">Detalle</a>
+          · <a href="{% url 'games:edit' pk=game.pk %}">Editar</a>
+        </div>
+      </div>
+      {% if entry.player_scores %}
+      <ul class="game-player-scores">
+        {% for row in entry.player_scores %}
+        <li class="{% if row.is_winner %}game-player-scores__winner{% endif %}">
+          <span class="game-player-scores__name">
+            {{ row.player_name }}
+            {% if row.is_winner %}<span class="tag tag-sm">Ganador</span>{% endif %}
+          </span>
+          <span class="game-player-scores__stats">
+            {{ row.victory_points }} PV · {{ row.placement }}.º
+            · <strong>{{ row.league_points }} pts</strong>
+            <span class="meta formula">({{ row.formula }})</span>
+          </span>
+        </li>
         {% endfor %}
-      </tbody>
-    </table>
+      </ul>
+      {% else %}
+      <p class="help">Sin resultados registrados.</p>
+      {% endif %}
+    </article>
+    {% endwith %}
+    {% endfor %}
   </div>
   {% else %}
   <p class="empty">Esta liga aún no tiene partidas.</p>

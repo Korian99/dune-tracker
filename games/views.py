@@ -20,6 +20,7 @@ from .scoring import (
     DEFAULT_SCORING_NOTES,
     breakdown_display,
     compute_league_points_breakdown,
+    game_score_summary,
     league_standings,
     resolve_scoring_config,
 )
@@ -351,12 +352,16 @@ def league_detail(request, slug):
     standings = league_standings(league)
     roster = league.players.order_by("name")
     add_player_form = LeagueAddPlayerForm()
+    game_entries = [
+        {"game": game, "player_scores": game_score_summary(game, league)}
+        for game in games
+    ]
     return render(
         request,
         "games/league_detail.html",
         {
             "league": league,
-            "games": games,
+            "game_entries": game_entries,
             "standings": standings,
             "roster": roster,
             "add_player_form": add_player_form,
