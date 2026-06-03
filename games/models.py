@@ -109,6 +109,61 @@ class LeagueMembership(models.Model):
         return f"{self.player.name} @ {self.league.name}"
 
 
+class LeagueHito(models.Model):
+    """
+    League milestone / highscore track (Spanish UI: «Hito»).
+    Built-in slugs: highscore, powerscore, lowscore; leagues can personalize names.
+    """
+
+    class Metric(models.TextChoices):
+        MAX_LEAGUE_POINTS = (
+            "max_league_points",
+            "Máx. puntos de liga (una partida)",
+        )
+        MAX_VICTORY_POINTS = (
+            "max_victory_points",
+            "Máx. PV (una partida)",
+        )
+        MIN_LEAGUE_POINTS = (
+            "min_league_points",
+            "Mín. puntos de liga (una partida)",
+        )
+
+    league = models.ForeignKey(
+        League,
+        on_delete=models.CASCADE,
+        related_name="hitos",
+    )
+    slug = models.SlugField(max_length=40)
+    name = models.CharField(
+        max_length=80,
+        help_text="Display name (personalizable por liga).",
+    )
+    description = models.TextField(blank=True)
+    metric = models.CharField(max_length=32, choices=Metric.choices)
+    order = models.PositiveSmallIntegerField(default=0)
+    is_builtin = models.BooleanField(
+        default=False,
+        help_text="True for highscore / powerscore / lowscore seeded on create.",
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "slug"]
+        verbose_name = "league hito"
+        verbose_name_plural = "league hitos"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["league", "slug"],
+                name="unique_hito_slug_per_league",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.league.name})"
+
+
 def resolve_player(name: str, league: League | None = None) -> Player:
     """
     Find or create a player by display name; add to league roster when league is set.
@@ -177,6 +232,11 @@ class Game(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="designated_win_for_game",
+    )
+    placement_tiebreaks = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Per-VP tiebreak: VP string -> winner result pk or 'tie'",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -295,21 +355,9 @@ class GameResult(models.Model):
 
     @property
     def placement(self):
-        """Competition rank by VP; after tiebreak, only the winner is 1st."""
-        results = list(self.game.results.all())
-        higher = sum(1 for r in results if r.victory_points > self.victory_points)
-        base = higher + 1
-        if self.game.tied_game:
-            return base
-        winner = self.game.resolved_winner()
-        if winner is None:
-            return base
-        max_vp = max((r.victory_points for r in results), default=0)
-        if self.victory_points != max_vp:
-            return base
-        if self.pk == winner.pk:
-            return 1
-        return 2
+        from .tiebreak import result_placement
+
+        return result_placement(self)
 
     @property
     def is_winner(self):

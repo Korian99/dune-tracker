@@ -47,6 +47,42 @@
 <p class="help">Edita la liga para ver o cambiar los parámetros de puntuación y el texto de reglas.</p>
 {% endif %}
 
+{% if hito_snapshots %}
+<section class="section hitos-section">
+  <h2>Hitos</h2>
+  <p class="help">Récords de la liga por partida. Los nombres se pueden personalizar en el administrador.</p>
+  <div class="hitos-grid">
+    {% for snap in hito_snapshots %}
+    <article class="hito-card">
+      <h3 class="hito-card__title">{{ snap.hito.name }}</h3>
+      {% if snap.hito.description %}
+      <p class="hito-card__desc">{{ snap.hito.description }}</p>
+      {% endif %}
+      {% if snap.empty %}
+      <p class="hito-card__value hito-card__value--empty">Sin partidas aún</p>
+      {% else %}
+      <p class="hito-card__value">{{ snap.value_label }}</p>
+      <ul class="hito-card__holders">
+        {% for holder in snap.holders %}
+        <li>
+          <strong>{{ holder.player_name }}</strong>
+          <span class="meta">
+            <a href="{% url 'games:detail' pk=holder.game_id %}">{{ holder.played_on }}</a>
+            · {{ holder.victory_points }} PV
+            {% if snap.hito.metric != "max_victory_points" %}
+            · {{ holder.league_points|floatformat:0 }} pts liga
+            {% endif %}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 {% if standings %}
 <section class="section">
   <h2>Clasificación</h2>

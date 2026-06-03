@@ -93,11 +93,16 @@ class LeagueForm(forms.ModelForm):
                 self.fields[key].initial = value
 
     def save(self, commit=True):
+        from .hitos import ensure_default_hitos
+
         league = super().save(commit=False)
         league.scoring_config = config_from_form_data(self.cleaned_data)
         if commit:
+            is_new = league.pk is None
             league.save()
             self.save_m2m()
+            if is_new:
+                ensure_default_hitos(league)
         return league
 
 

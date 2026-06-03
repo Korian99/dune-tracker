@@ -123,8 +123,8 @@ def compute_league_points_breakdown(
     """
     Per-game league points with components.
 
-    Ties (placement): competition by VP; designated winner is 1st, other
-    max-VP players are 2nd. Declared ties (tied_game) keep shared ranks.
+    Ties (placement): placements_for_game() in tiebreak.py — each resolved
+    VP group gives one player the better rank; declared ties share a rank.
     Early-win: designated winner only; unresolved VP ties use all at max VP.
     """
     config = resolve_scoring_config(league)

@@ -30,13 +30,13 @@
 
 {% if needs_tiebreak %}
 <section class="flash flash-warning tiebreak-banner">
-  <p>Hay un empate en los PV más altos sin resolver.</p>
-  <a href="{% url 'games:resolve_tie' pk=game.pk %}" class="btn btn-primary">Resolver empate</a>
+  <p>Hay empates en PV sin resolver (afectan puestos 1.º–4.º).</p>
+  <a href="{% url 'games:resolve_tie' pk=game.pk %}" class="btn btn-primary">Resolver empates</a>
 </section>
-{% elif has_top_vp_tie %}
+{% elif has_vp_ties %}
 <p class="help">
-  <a href="{% url 'games:resolve_tie' pk=game.pk %}">Revisar o cambiar desempate</a>
-  (útil en partidas importadas con empate en PV máximos).
+  <a href="{% url 'games:resolve_tie' pk=game.pk %}">Revisar o cambiar desempates</a>
+  (puestos 2.º–4.º y ganador de la partida).
 </p>
 {% endif %}
 

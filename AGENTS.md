@@ -60,6 +60,13 @@ README.md         # developer setup (English)
 
 - Through table: `league` + `player`, unique together.
 
+### `LeagueHito` (UI: **Hitos**)
+
+- Per-league milestone / highscore tracks (`games/hitos.py`).
+- Built-in slugs on league create (migration `0008`): `highscore` (max league points in one game), `powerscore` (max VP), `lowscore` (min league points). Names/descriptions are personalized per league via admin.
+- `metric` — `max_league_points` | `max_victory_points` | `min_league_points`.
+- Holders computed from game results on `league_detail` (not stored rows).
+
 ### `Game`
 
 - Optional `league` FK.

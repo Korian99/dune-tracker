@@ -1291,3 +1291,54 @@ h2 {
   display: block;
   margin-bottom: 0.25rem;
 }
+
+.hitos-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.hito-card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+}
+
+.hito-card__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  color: var(--spice-bright);
+}
+
+.hito-card__desc {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.hito-card__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+}
+
+.hito-card__value--empty {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.hito-card__holders {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hito-card__holders li {
+  margin-bottom: 0.35rem;
+}
+
+.hito-card__holders li:last-child {
+  margin-bottom: 0;
+}

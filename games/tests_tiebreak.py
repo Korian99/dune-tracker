@@ -7,8 +7,11 @@ from .models import Game, GameResult, League, resolve_player
 from .scoring import compute_league_points_breakdown
 from .tiebreak import (
     apply_tiebreak,
+    apply_tiebreaks_from_post,
     game_needs_tiebreak,
     has_top_vp_tie,
+    has_vp_ties,
+    placements_for_game,
     vp_tie_groups,
 )
 
@@ -44,6 +47,32 @@ class TiebreakLogicTests(TestCase):
 
     def test_needs_tiebreak_when_top_shared(self):
         self.assertTrue(game_needs_tiebreak(self.game))
+
+    def test_lower_vp_tie_needs_resolution(self):
+        self.assertTrue(has_vp_ties(self.game))
+        by_name = {r.player.name: r for r in self.game.results.select_related("player")}
+        apply_tiebreak(self.game, "winner", str(by_name["A"].pk))
+        self.game.refresh_from_db()
+        self.assertTrue(game_needs_tiebreak(self.game))
+
+    def test_all_placements_after_full_tiebreak(self):
+        by_name = {r.player.name: r for r in self.game.results.select_related("player")}
+        apply_tiebreak(self.game, "winner", str(by_name["A"].pk))
+        apply_tiebreak(self.game, "winner", str(by_name["C"].pk), vp=8)
+        self.game.refresh_from_db()
+        self.assertFalse(game_needs_tiebreak(self.game))
+        self.assertEqual(by_name["A"].placement, 1)
+        self.assertEqual(by_name["B"].placement, 2)
+        self.assertEqual(by_name["C"].placement, 3)
+        self.assertEqual(by_name["D"].placement, 4)
+        self.assertEqual(
+            compute_league_points_breakdown(by_name["C"], self.league)["placement_points"],
+            2,
+        )
+        self.assertEqual(
+            compute_league_points_breakdown(by_name["D"], self.league)["placement_points"],
+            1,
+        )
 
     def test_apply_winner_and_tie(self):
         leaders = self.game.max_vp_results()
@@ -128,8 +157,8 @@ class TiebreakRedirectTests(TestCase):
         pick = client.post(
             resolve_url,
             {
-                "resolution": "winner",
-                "winner_result_id": str(r2.pk),
+                "tiebreak_10_resolution": "winner",
+                "tiebreak_10_winner": str(r2.pk),
             },
         )
         self.assertEqual(pick.status_code, 302)
@@ -195,4 +224,4 @@ class TiebreakRedirectTests(TestCase):
 
         page = client.get(reverse("games:resolve_tie", kwargs={"pk": game.pk}))
         self.assertEqual(page.status_code, 200)
-        self.assertContains(page, "importada")
+        self.assertContains(page, "desempates guardados")
