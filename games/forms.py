@@ -2,7 +2,11 @@ from django import forms
 from django.forms import inlineformset_factory
 
 from .models import Game, GameResult, League
-from .scoring import DEFAULT_SCORING_NOTES
+from .scoring import (
+    DEFAULT_SCORING_NOTES,
+    config_from_form_data,
+    config_to_form_initial,
+)
 
 LEADER_SUGGESTIONS = [
     "Paul Atreides",
@@ -23,13 +27,47 @@ LEADER_SUGGESTIONS = [
 
 
 class LeagueForm(forms.ModelForm):
+    count_games = forms.IntegerField(
+        min_value=0,
+        max_value=99,
+        initial=8,
+        label="Partidas que cuentan",
+        help_text="Solo las mejores N puntuaciones suman (0 = todas).",
+    )
+    points_1st = forms.IntegerField(min_value=0, max_value=20, initial=5, label="Puntos 1.º")
+    points_2nd = forms.IntegerField(min_value=0, max_value=20, initial=3, label="Puntos 2.º")
+    points_3rd = forms.IntegerField(min_value=0, max_value=20, initial=2, label="Puntos 3.º")
+    points_4th = forms.IntegerField(min_value=0, max_value=20, initial=1, label="Puntos 4.º")
+    early_win_max_round = forms.IntegerField(
+        min_value=0,
+        max_value=30,
+        initial=6,
+        label="Victoria temprana hasta ronda",
+        help_text="+1 si ganas con rondas 1..N (0 = desactivado). Ej. 6 = antes de ronda 7.",
+    )
+    vp_bonus_10 = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="+1 si alcanzas 10 PV",
+    )
+    vp_bonus_12 = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="+1 si alcanzas 12 PV",
+    )
+    vp_bonus_15 = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="+1 si alcanzas 15 PV",
+    )
+
     class Meta:
         model = League
         fields = ["name", "description", "scoring_notes"]
         labels = {
             "name": "Nombre",
             "description": "Descripción",
-            "scoring_notes": "Reglas de puntuación",
+            "scoring_notes": "Reglas (texto para jugadores)",
         }
         widgets = {
             "description": forms.Textarea(attrs={"rows": 2}),
@@ -40,6 +78,21 @@ class LeagueForm(forms.ModelForm):
                 }
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            initial = config_to_form_initial(self.instance.scoring_config or {})
+            for key, value in initial.items():
+                self.fields[key].initial = value
+
+    def save(self, commit=True):
+        league = super().save(commit=False)
+        league.scoring_config = config_from_form_data(self.cleaned_data)
+        if commit:
+            league.save()
+            self.save_m2m()
+        return league
 
 
 class GameForm(forms.ModelForm):

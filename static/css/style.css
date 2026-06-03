@@ -626,6 +626,16 @@ h2 {
   gap: 1rem;
 }
 
+.scoring-points-row {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 540px) {
+  .scoring-points-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .result-rows {
   display: flex;
   flex-direction: column;

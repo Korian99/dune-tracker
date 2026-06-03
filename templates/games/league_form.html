@@ -9,16 +9,74 @@
 
 <form method="post" class="game-form">
   {% csrf_token %}
+
   <fieldset class="form-section">
-    {% for field in form %}
+    <legend>Datos de la liga</legend>
     <div class="field">
-      {{ field.label_tag }}
-      {{ field }}
-      {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
-      {{ field.errors }}
+      {{ form.name.label_tag }}
+      {{ form.name }}
+      {{ form.name.errors }}
     </div>
-    {% endfor %}
+    <div class="field">
+      {{ form.description.label_tag }}
+      {{ form.description }}
+      {{ form.description.errors }}
+    </div>
+    <div class="field">
+      {{ form.scoring_notes.label_tag }}
+      {{ form.scoring_notes }}
+      <span class="help">Texto libre para los jugadores (opcional).</span>
+      {{ form.scoring_notes.errors }}
+    </div>
   </fieldset>
+
+  <fieldset class="form-section">
+    <legend>Parámetros de puntuación</legend>
+    <p class="help">Estos valores se guardan en la liga y se usan al calcular la clasificación.</p>
+    <div class="field">
+      {{ form.count_games.label_tag }}
+      {{ form.count_games }}
+      <span class="help">{{ form.count_games.help_text }}</span>
+      {{ form.count_games.errors }}
+    </div>
+    <div class="field-row scoring-points-row">
+      <div class="field">
+        {{ form.points_1st.label_tag }}
+        {{ form.points_1st }}
+        {{ form.points_1st.errors }}
+      </div>
+      <div class="field">
+        {{ form.points_2nd.label_tag }}
+        {{ form.points_2nd }}
+        {{ form.points_2nd.errors }}
+      </div>
+      <div class="field">
+        {{ form.points_3rd.label_tag }}
+        {{ form.points_3rd }}
+        {{ form.points_3rd.errors }}
+      </div>
+      <div class="field">
+        {{ form.points_4th.label_tag }}
+        {{ form.points_4th }}
+        {{ form.points_4th.errors }}
+      </div>
+    </div>
+    <div class="field">
+      {{ form.early_win_max_round.label_tag }}
+      {{ form.early_win_max_round }}
+      <span class="help">{{ form.early_win_max_round.help_text }}</span>
+      {{ form.early_win_max_round.errors }}
+    </div>
+    <div class="field field-alliances">
+      <span class="field-label">Bonos por PV finales</span>
+      <div class="alliance-checks">
+        <label>{{ form.vp_bonus_10 }} 10+ PV</label>
+        <label>{{ form.vp_bonus_12 }} 12+ PV</label>
+        <label>{{ form.vp_bonus_15 }} 15+ PV</label>
+      </div>
+    </div>
+  </fieldset>
+
   <div class="form-actions">
     <button type="submit" class="btn btn-primary">Guardar liga</button>
     <a href="{% if is_edit %}{% url 'games:league_detail' slug=league.slug %}{% else %}{% url 'games:league_list' %}{% endif %}" class="btn btn-ghost">Cancelar</a>

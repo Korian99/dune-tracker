@@ -1,43 +1,97 @@
 """
 League scoring for Dune Tracker.
 
-Default system (empty scoring_config or system omitted / "standard"):
-  - Placement by victory_points (competition ranking; see tie notes below).
-  - Placement points: 1st=5, 2nd=3, 3rd=2, 4th=1, 5th+=0.
-  - +1 early-win bonus if the player tied for highest VP and game.rounds is 1–6.
-  - +1 each if final VP >= 10, >= 12, >= 15 (stacking).
+Config lives in League.scoring_config (JSON). Use resolve_scoring_config() for
+merged defaults. Edit parameters per league in the league form or admin.
 
-Alternate: scoring_config {"system": "victory_points"} — league points = VP.
+Default standard system:
+  - Best count_games results count toward standings (default 8; 0 = all games).
+  - Placement points by rank (default 1st=5, 2nd=3, 3rd=2, 4th=1).
+  - +1 early-win if max VP and rounds 1..early_win_max_round (default 6).
+  - +1 per vp_threshold reached (default 10, 12, 15; stacking).
+
+Alternate: {"system": "victory_points"} — league points = VP per game (still best-N).
 """
 
 from collections import defaultdict
-from typing import TypedDict
+from typing import Any, TypedDict
 
+from .defaults import DEFAULT_LEAGUE_SCORING_NOTES, default_league_scoring_config
 from .models import GameResult, League
 
-# Spanish default for new leagues (user-facing; editable per league).
-DEFAULT_SCORING_NOTES = """\
-Puntos por partida:
-• Puesto: 1.º = 5, 2.º = 3, 3.º = 2, 4.º = 1 (5.º o peor = 0).
-• +1 si ganas antes de la ronda 7 (rondas 1–6 registradas).
-• +1 si terminas con 10+ PV, +1 con 12+ PV, +1 con 15+ PV (se suman).
-"""
+DEFAULT_SCORING_NOTES = DEFAULT_LEAGUE_SCORING_NOTES
 
-PLACEMENT_POINTS = {1: 5, 2: 3, 3: 2, 4: 1}
+
+def default_scoring_config() -> dict[str, Any]:
+    """Alias for migrations/tests; placement keys normalized on read."""
+    raw = default_league_scoring_config()
+    return {
+        **raw,
+        "placement_points": {int(k): int(v) for k, v in raw["placement_points"].items()},
+    }
+
+
+def resolve_scoring_config(league: League) -> dict[str, Any]:
+    """Merge league.scoring_config onto defaults; normalize types from JSON."""
+    merged = {**default_scoring_config(), **(league.scoring_config or {})}
+    raw_pp = merged.get("placement_points") or default_scoring_config()["placement_points"]
+    merged["placement_points"] = {int(k): int(v) for k, v in raw_pp.items()}
+    merged["vp_thresholds"] = [int(x) for x in merged.get("vp_thresholds", [10, 12, 15])]
+    merged["count_games"] = int(merged.get("count_games", 8))
+    merged["early_win_max_round"] = int(merged.get("early_win_max_round", 6))
+    merged["system"] = merged.get("system") or "standard"
+    return merged
+
+
+def config_from_form_data(cleaned: dict) -> dict[str, Any]:
+    """Build scoring_config JSON from LeagueForm cleaned_data."""
+    thresholds = []
+    if cleaned.get("vp_bonus_10"):
+        thresholds.append(10)
+    if cleaned.get("vp_bonus_12"):
+        thresholds.append(12)
+    if cleaned.get("vp_bonus_15"):
+        thresholds.append(15)
+    return {
+        "system": "standard",
+        "count_games": cleaned["count_games"],
+        "placement_points": {
+            1: cleaned["points_1st"],
+            2: cleaned["points_2nd"],
+            3: cleaned["points_3rd"],
+            4: cleaned["points_4th"],
+        },
+        "early_win_max_round": cleaned["early_win_max_round"],
+        "vp_thresholds": thresholds,
+    }
+
+
+def config_to_form_initial(config: dict[str, Any]) -> dict[str, Any]:
+    cfg = {**default_scoring_config(), **config}
+    pp = cfg["placement_points"]
+    thresholds = set(cfg.get("vp_thresholds", []))
+    return {
+        "count_games": cfg["count_games"],
+        "points_1st": pp.get(1, 5),
+        "points_2nd": pp.get(2, 3),
+        "points_3rd": pp.get(3, 2),
+        "points_4th": pp.get(4, 1),
+        "early_win_max_round": cfg["early_win_max_round"],
+        "vp_bonus_10": 10 in thresholds,
+        "vp_bonus_12": 12 in thresholds,
+        "vp_bonus_15": 15 in thresholds,
+    }
 
 
 class LeaguePointsBreakdown(TypedDict):
     placement: int
     placement_points: int
     early_win: int
-    vp_ge_10: int
-    vp_ge_12: int
-    vp_ge_15: int
+    vp_threshold_bonuses: int
     total: float
 
 
-def _config_system(league: League) -> str:
-    config = league.scoring_config or {}
+def _config_system(config: dict[str, Any]) -> str:
     return config.get("system") or "standard"
 
 
@@ -51,54 +105,50 @@ def _has_highest_vp(result: GameResult) -> bool:
     return max_vp is not None and result.victory_points == max_vp
 
 
+def _vp_threshold_bonuses(vp: int, thresholds: list[int]) -> int:
+    return sum(1 for t in thresholds if vp >= t)
+
+
 def compute_league_points_breakdown(
     result: GameResult, league: League
 ) -> LeaguePointsBreakdown:
     """
     Per-game league points with components.
 
-    Ties (placement): uses GameResult.placement — competition ranking by VP
-    (e.g. two players at 10 VP both rank 1st; next player is 3rd, not 2nd).
-
-    Ties (early-win bonus): every player at the game's maximum VP qualifies;
-    does not use GameResult.is_winner (which breaks ties by lowest id).
+    Ties (placement): GameResult.placement — competition ranking by VP.
+    Ties (early-win): all players at max VP qualify (not is_winner pk tie-break).
     """
-    if _config_system(league) == "victory_points":
+    config = resolve_scoring_config(league)
+
+    if _config_system(config) == "victory_points":
         vp = float(result.victory_points)
         return LeaguePointsBreakdown(
             placement=result.placement,
             placement_points=0,
             early_win=0,
-            vp_ge_10=0,
-            vp_ge_12=0,
-            vp_ge_15=0,
+            vp_threshold_bonuses=0,
             total=vp,
         )
 
     placement = result.placement
-    placement_pts = PLACEMENT_POINTS.get(placement, 0)
+    placement_pts = config["placement_points"].get(placement, 0)
 
     early_win = 0
-    if _has_highest_vp(result):
+    max_round = config["early_win_max_round"]
+    if max_round > 0 and _has_highest_vp(result):
         rounds = result.game.rounds
-        if rounds is not None and 1 <= rounds <= 6:
+        if rounds is not None and 1 <= rounds <= max_round:
             early_win = 1
 
     vp = result.victory_points
-    vp_ge_10 = 1 if vp >= 10 else 0
-    vp_ge_12 = 1 if vp >= 12 else 0
-    vp_ge_15 = 1 if vp >= 15 else 0
+    vp_bonuses = _vp_threshold_bonuses(vp, config["vp_thresholds"])
 
-    total = float(
-        placement_pts + early_win + vp_ge_10 + vp_ge_12 + vp_ge_15
-    )
+    total = float(placement_pts + early_win + vp_bonuses)
     return LeaguePointsBreakdown(
         placement=placement,
         placement_points=placement_pts,
         early_win=early_win,
-        vp_ge_10=vp_ge_10,
-        vp_ge_12=vp_ge_12,
-        vp_ge_15=vp_ge_15,
+        vp_threshold_bonuses=vp_bonuses,
         total=total,
     )
 
@@ -109,68 +159,70 @@ def compute_league_points(result: GameResult, league: League) -> float:
 
 
 def breakdown_display(breakdown: LeaguePointsBreakdown) -> str:
-    """Compact formula for templates, e.g. 5+1+1+1=8."""
+    """Compact formula for templates, e.g. 5+1+2=8."""
     parts = [str(breakdown["placement_points"])]
     if breakdown["early_win"]:
         parts.append("1")
-    if breakdown["vp_ge_10"]:
-        parts.append("1")
-    if breakdown["vp_ge_12"]:
-        parts.append("1")
-    if breakdown["vp_ge_15"]:
-        parts.append("1")
+    if breakdown["vp_threshold_bonuses"]:
+        parts.append(str(breakdown["vp_threshold_bonuses"]))
     total = breakdown["total"]
     total_str = str(int(total)) if total == int(total) else str(total)
     return "+".join(parts) + f"={total_str}"
 
 
+def _select_counted_scores(
+    per_game: list[tuple[float, GameResult, LeaguePointsBreakdown]],
+    count_games: int,
+) -> list[tuple[float, GameResult, LeaguePointsBreakdown]]:
+    """Keep the best count_games by points; discard the rest."""
+    ordered = sorted(per_game, key=lambda x: (-x[0], x[1].game.played_on, x[1].game_id))
+    if count_games <= 0 or len(ordered) <= count_games:
+        return ordered
+    return ordered[:count_games]
+
+
 def league_standings(league: League):
     """
-    Aggregate standings for a league. Returns list of dicts sorted by points.
-
-    Each row includes league_points, games, wins, avg_vp, and bonus totals
-    (early_win_count, vp_bonus_count) for optional display.
+    Aggregate standings. Only the best count_games per player count toward totals.
     """
-    totals = defaultdict(
-        lambda: {
-            "points": 0.0,
-            "games": 0,
-            "wins": 0,
-            "vp_sum": 0,
-            "early_wins": 0,
-            "vp_bonuses": 0,
-        }
+    config = resolve_scoring_config(league)
+    count_games = config["count_games"]
+
+    per_player_games: dict[str, list[tuple[float, GameResult, LeaguePointsBreakdown]]] = (
+        defaultdict(list)
     )
     results = GameResult.objects.filter(game__league=league).select_related("game")
 
     for result in results:
-        name = result.player_name
         breakdown = compute_league_points_breakdown(result, league)
-        pts = breakdown["total"]
-        totals[name]["points"] += pts
-        totals[name]["games"] += 1
-        totals[name]["vp_sum"] += result.victory_points
-        if result.is_winner:
-            totals[name]["wins"] += 1
-        totals[name]["early_wins"] += breakdown["early_win"]
-        totals[name]["vp_bonuses"] += (
-            breakdown["vp_ge_10"]
-            + breakdown["vp_ge_12"]
-            + breakdown["vp_ge_15"]
+        per_player_games[result.player_name].append(
+            (breakdown["total"], result, breakdown)
         )
 
     rows = []
-    for name, data in totals.items():
-        games = data["games"]
+    for name, all_games in per_player_games.items():
+        games_played = len(all_games)
+        counted = _select_counted_scores(all_games, count_games)
+        games_counted = len(counted)
+        games_discarded = games_played - games_counted
+
+        points = sum(x[0] for x in counted)
+        vp_sum = sum(x[1].victory_points for x in counted)
+        wins = sum(1 for x in counted if x[1].is_winner)
+        early_wins = sum(x[2]["early_win"] for x in counted)
+        vp_bonuses = sum(x[2]["vp_threshold_bonuses"] for x in counted)
+
         rows.append(
             {
                 "player_name": name,
-                "league_points": round(data["points"], 1),
-                "games": games,
-                "wins": data["wins"],
-                "avg_vp": round(data["vp_sum"] / games, 1) if games else 0,
-                "early_wins": data["early_wins"],
-                "vp_bonuses": data["vp_bonuses"],
+                "league_points": round(points, 1),
+                "games": games_counted,
+                "games_played": games_played,
+                "games_discarded": games_discarded,
+                "wins": wins,
+                "avg_vp": round(vp_sum / games_counted, 1) if games_counted else 0,
+                "early_wins": early_wins,
+                "vp_bonuses": vp_bonuses,
             }
         )
     rows.sort(key=lambda r: (-r["league_points"], -r["wins"], -r["avg_vp"]))

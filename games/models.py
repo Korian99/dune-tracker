@@ -2,6 +2,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.text import slugify
 
+from .defaults import default_league_scoring_config
+
 
 class League(models.Model):
     """Groups games under shared rules; custom scoring applied via scoring_config later."""
@@ -14,9 +16,9 @@ class League(models.Model):
         help_text="League scoring rules (admin; user-facing copy is stored as entered).",
     )
     scoring_config = models.JSONField(
-        default=dict,
+        default=default_league_scoring_config,
         blank=True,
-        help_text="Structured scoring JSON — see games/scoring.py",
+        help_text="Structured scoring JSON — see games/defaults.py and games/scoring.py",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

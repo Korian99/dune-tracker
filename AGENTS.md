@@ -86,31 +86,38 @@ Implemented in `games/scoring.py`:
 
 ### Standard system (default)
 
-Used when `scoring_config` is empty or `system` is omitted / `"standard"`:
+Used when `scoring_config` is empty or `system` is `"standard"`. Canonical defaults in `games/defaults.py` (DB default + migration `0003`). Runtime merge via `resolve_scoring_config(league)`.
 
-| Component | Rule |
-|-----------|------|
-| Placement | By `GameResult.placement` (VP competition ranking): 1st=5, 2nd=3, 3rd=2, 4th=1, 5th+=0 |
-| Early win | +1 if player ties for highest VP in the game **and** `game.rounds` is 1–6 (round 7+ does not qualify; `rounds` null = no bonus) |
-| VP thresholds | +1 if VP ≥ 10, +1 if VP ≥ 12, +1 if VP ≥ 15 (stacking) |
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `count_games` | `8` | Only the best N per-game scores count toward standings (`0` = all) |
+| `placement_points` | `{1:5, 2:3, 3:2, 4:1}` | Points by `GameResult.placement` |
+| `early_win_max_round` | `6` | +1 if max VP and `1 <= game.rounds <= N` (`0` = off) |
+| `vp_thresholds` | `[10, 12, 15]` | +1 each time final VP ≥ threshold (stacking) |
 
-**Ties:** Placement uses competition ranking (tied VP → same rank; next rank skips). Early-win uses max VP, not `is_winner` (which breaks ties by lowest `id`).
+**Ties:** Placement = competition ranking by VP. Early-win = all players at max VP (not `is_winner` pk tie-break).
 
-Default Spanish copy for new leagues: `DEFAULT_SCORING_NOTES` in `scoring.py` (pre-filled on league create).
+**Best-N:** `league_standings()` sorts each player’s games by points descending and sums only `count_games` (discards worst).
 
-### `scoring_config` JSON
+Edit per league: **Editar liga** form → “Parámetros de puntuación” (writes `scoring_config` JSON).
 
-```json
-{ "system": "standard" }
-```
-
-or empty `{}` — rules above.
+### `scoring_config` JSON example
 
 ```json
-{ "system": "victory_points" }
+{
+  "system": "standard",
+  "count_games": 8,
+  "placement_points": { "1": 5, "2": 3, "3": 2, "4": 1 },
+  "early_win_max_round": 6,
+  "vp_thresholds": [10, 12, 15]
+}
 ```
 
-League points per game = `victory_points` (no placement or bonuses).
+```json
+{ "system": "victory_points", "count_games": 8 }
+```
+
+League points per game = `victory_points`; best-N still applies.
 
 ## Conventions
 

@@ -45,7 +45,7 @@
   {% if current_league.scoring_notes %}
     <p class="scoring-notes">{{ current_league.scoring_notes|linebreaksbr }}</p>
   {% else %}
-    <p class="help">Puntos: puesto (5/3/2/1), victoria antes de ronda 7 (+1), umbrales 10/12/15 PV (+1 c/u).</p>
+    <p class="help">Clasificación según los parámetros de la liga (mejores partidas que cuentan).</p>
   {% endif %}
   <div class="table-wrap">
     <table class="data-table data-table--cards">
@@ -56,7 +56,7 @@
           <th>Pts. liga</th>
           <th>Bonos</th>
           <th>Victorias</th>
-          <th>Partidas</th>
+          <th>Cuentan</th>
           <th>PV med.</th>
         </tr>
       </thead>
@@ -72,7 +72,9 @@
             {% if not row.early_wins and not row.vp_bonuses %}—{% endif %}
           </td>
           <td data-label="Victorias">{{ row.wins }}</td>
-          <td data-label="Partidas">{{ row.games }}</td>
+          <td data-label="Cuentan">
+            {{ row.games }}{% if row.games_discarded %} / {{ row.games_played }}{% endif %}
+          </td>
           <td data-label="PV med.">{{ row.avg_vp }}</td>
         </tr>
         {% endfor %}
