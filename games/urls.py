@@ -15,6 +15,11 @@ urlpatterns = [
     path("leagues/", views.league_list, name="league_list"),
     path("leagues/new/", views.league_create, name="league_create"),
     path("leagues/<slug:slug>/", views.league_detail, name="league_detail"),
+    path(
+        "leagues/<slug:slug>/export/",
+        views.league_sheet_export,
+        name="league_sheet_export",
+    ),
     path("leagues/<slug:slug>/edit/", views.league_edit, name="league_edit"),
     path(
         "leagues/<slug:slug>/players/add/",

@@ -2,6 +2,7 @@ from datetime import date
 
 from django.contrib import messages
 from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
@@ -14,6 +15,7 @@ from .forms import (
     _player_choice_list,
 )
 from .models import Game, GameResult, League
+from .sheet_io import export_league_sheet
 from .scoring import (
     DEFAULT_SCORING_NOTES,
     breakdown_display,
@@ -23,14 +25,21 @@ from .scoring import (
 )
 
 
-def _save_results(formset, alliance_form=None):
+def _save_results(formset, alliance_data=None):
+    """Save result rows; always apply alliances against full game results."""
     results = formset.save()
+    game = formset.instance
     for i, result in enumerate(results):
         if result.order != i:
             result.order = i
             result.save(update_fields=["order"])
-    if alliance_form and alliance_form.is_valid():
-        _apply_alliances(results, alliance_form.cleaned_data)
+    if game and game.pk:
+        db_results = list(
+            GameResult.objects.filter(game=game).select_related("player")
+        )
+        if alliance_data is not None:
+            _apply_alliances(db_results, alliance_data)
+        return db_results if alliance_data is not None else (results or db_results)
     return results
 
 
@@ -57,27 +66,34 @@ def _alliance_initial_from_game(game):
     return initial
 
 
-def _alliance_form_for_request(request, formset, game=None, league=None):
-    """Build alliance form; on POST use submitted player rows for choices."""
-    league = league or (game.league if game and game.league_id else None)
+def _alliance_player_names(request, game=None, league=None):
+    """Names valid for alliance dropdowns (players in this game + POST rows)."""
+    names = set()
+    if game:
+        names.update(
+            game.results.select_related("player").values_list("player__name", flat=True)
+        )
     if request.method == "POST":
-        names = []
         total = int(request.POST.get("results-TOTAL_FORMS", 0))
         for i in range(total):
             val = request.POST.get(f"results-{i}-player_pick", "").strip()
             if val:
-                names.append(val)
-        if not names:
-            names = _player_choice_list(league)
-        initial = {
-            field: request.POST.get(field, "").strip()
-            for field, _ in GameResult.ALLIANCE_FIELDS
-            if request.POST.get(field, "").strip()
-        }
-        return GameAllianceForm(
-            request.POST, player_names=names, initial_assignments=initial or None
-        )
-    names = _player_choice_list(league)
+                names.add(val)
+        for field, _ in GameResult.ALLIANCE_FIELDS:
+            val = request.POST.get(field, "").strip()
+            if val:
+                names.add(val)
+    if not names:
+        names.update(_player_choice_list(league))
+    return sorted(names)
+
+
+def _alliance_form_for_request(request, formset, game=None, league=None):
+    """Build alliance form; on POST use submitted player rows for choices."""
+    league = league or (game.league if game and game.league_id else None)
+    names = _alliance_player_names(request, game=game, league=league)
+    if request.method == "POST":
+        return GameAllianceForm(request.POST, player_names=names)
     initial = _alliance_initial_from_game(game) if game else None
     return GameAllianceForm(player_names=names, initial_assignments=initial)
 
@@ -197,7 +213,7 @@ def game_create(request):
             formset.league = game.league
             for f in formset.forms:
                 f.league = game.league
-            _save_results(formset, alliance_form)
+            _save_results(formset, alliance_form.cleaned_data)
             return redirect("games:detail", pk=game.pk)
     else:
         initial = {
@@ -259,7 +275,7 @@ def game_edit(request, pk):
             formset.league = game.league
             for f in formset.forms:
                 f.league = game.league
-            _save_results(formset, alliance_form)
+            _save_results(formset, alliance_form.cleaned_data)
             return redirect("games:detail", pk=game.pk)
     else:
         form = GameForm(instance=game)
@@ -347,6 +363,17 @@ def league_detail(request, slug):
             "count_games": scoring_config["count_games"],
         },
     )
+
+
+@require_http_methods(["GET"])
+def league_sheet_export(request, slug):
+    """Download league games in Google Sheets pipe format."""
+    league = get_object_or_404(League, slug=slug)
+    text = export_league_sheet(league)
+    filename = f"{league.slug}-partidas.txt"
+    response = HttpResponse(text, content_type="text/plain; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @require_http_methods(["POST"])

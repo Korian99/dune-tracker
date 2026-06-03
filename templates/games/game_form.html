@@ -17,6 +17,10 @@
 <form method="post" class="game-form" id="game-form">
   {% csrf_token %}
 
+  {% if form.non_field_errors %}
+    <div class="form-errors">{{ form.non_field_errors }}</div>
+  {% endif %}
+
   <fieldset class="form-section">
     <legend>Sesión</legend>
     {% for field in form %}

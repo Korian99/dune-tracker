@@ -21,6 +21,21 @@
         allowClear: !$el.prop("required"),
         dropdownParent: jQuery("#game-form"),
       });
+      if ($el.val()) {
+        $el.trigger("change");
+      }
+    });
+  }
+
+  const gameForm = document.getElementById("game-form");
+  if (gameForm) {
+    gameForm.addEventListener("submit", () => {
+      jQuery(".enhanced-select").each(function () {
+        const $el = jQuery(this);
+        if ($el.data("select2")) {
+          $el.trigger("change.select2");
+        }
+      });
     });
   }
 

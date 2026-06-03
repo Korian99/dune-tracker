@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from .forms import GameAllianceForm
 from .models import Game, GameResult, League, Player, resolve_player
+from .views import _apply_alliances
 from .scoring import (
     compute_league_points,
     compute_league_points_breakdown,
@@ -214,6 +215,57 @@ class GameEditTests(TestCase):
         self.assertContains(response, "Editar partida")
         self.assertContains(response, "Ana")
         self.assertContains(response, "Bob")
+        self.assertContains(
+            response,
+            f'value="{self.game.played_on.isoformat()}"',
+            msg_prefix="Date field should be pre-filled for HTML5 date input",
+        )
+
+    def test_edit_saves_alliances(self):
+        results = list(self.game.results.order_by("pk"))
+        results[0].alliance_emperor = True
+        results[0].save(update_fields=["alliance_emperor"])
+        url = reverse("games:edit", kwargs={"pk": self.game.pk})
+        get_response = self.client.get(url)
+        data = {
+            "league": str(self.league.pk),
+            "played_on": self.game.played_on.isoformat(),
+            "player_count": "2",
+            "duration_hours": "",
+            "duration_minutes_part": "",
+            "rounds": "",
+            "notes": "",
+            "results-TOTAL_FORMS": get_response.context["formset"].total_form_count(),
+            "results-INITIAL_FORMS": get_response.context["formset"].initial_form_count(),
+            "results-MIN_NUM_FORMS": "0",
+            "results-MAX_NUM_FORMS": "6",
+            "results-0-id": str(results[0].pk),
+            "results-0-player_pick": "Ana",
+            "results-0-leader": "",
+            "results-0-victory_points": "10",
+            "results-0-sardaukar_count": "0",
+            "results-1-id": str(results[1].pk),
+            "results-1-player_pick": "Bob",
+            "results-1-leader": "",
+            "results-1-victory_points": "8",
+            "results-1-sardaukar_count": "0",
+            "alliance_emperor": "Bob",
+            "alliance_guild": "Bob",
+            "alliance_bene_gesserit": "",
+            "alliance_fremen": "",
+        }
+        for i in range(2, data["results-TOTAL_FORMS"]):
+            data[f"results-{i}-player_pick"] = ""
+            data[f"results-{i}-leader"] = ""
+            data[f"results-{i}-victory_points"] = ""
+            data[f"results-{i}-sardaukar_count"] = "0"
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302, response.context)
+        ana = GameResult.objects.get(game=self.game, player__name="Ana")
+        bob = GameResult.objects.get(game=self.game, player__name="Bob")
+        self.assertFalse(ana.alliance_emperor)
+        self.assertTrue(bob.alliance_emperor)
+        self.assertTrue(bob.alliance_guild)
 
     def test_edit_updates_victory_points(self):
         url = reverse("games:edit", kwargs={"pk": self.game.pk})
@@ -258,6 +310,36 @@ class GameEditTests(TestCase):
         results[1].refresh_from_db()
         self.assertEqual(results[0].victory_points, 11)
         self.assertEqual(results[1].victory_points, 7)
+
+
+class ApplyAlliancesTests(TestCase):
+    def test_apply_alliances_moves_holder(self):
+        league = League.objects.create(name="L", slug="apply-l")
+        game = Game.objects.create(
+            league=league, played_on=date.today(), player_count=2
+        )
+        ana = resolve_player("Ana", league=league)
+        bob = resolve_player("Bob", league=league)
+        r_ana = GameResult.objects.create(
+            game=game, player=ana, victory_points=10, alliance_emperor=True
+        )
+        r_bob = GameResult.objects.create(
+            game=game, player=bob, victory_points=8
+        )
+        _apply_alliances(
+            [r_ana, r_bob],
+            {
+                "alliance_emperor": "Bob",
+                "alliance_guild": "Bob",
+                "alliance_bene_gesserit": "",
+                "alliance_fremen": "",
+            },
+        )
+        r_ana.refresh_from_db()
+        r_bob.refresh_from_db()
+        self.assertFalse(r_ana.alliance_emperor)
+        self.assertTrue(r_bob.alliance_emperor)
+        self.assertTrue(r_bob.alliance_guild)
 
 
 class GameAllianceFormTests(TestCase):

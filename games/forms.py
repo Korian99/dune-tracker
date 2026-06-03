@@ -151,7 +151,10 @@ class GameForm(forms.ModelForm):
             "notes": "Notas",
         }
         widgets = {
-            "played_on": forms.DateInput(attrs={"type": "date"}),
+            "played_on": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
+            ),
             "rounds": forms.NumberInput(
                 attrs={"min": 1, "max": 30, "placeholder": "p. ej. 8"}
             ),
@@ -162,6 +165,11 @@ class GameForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["league"].required = False
         self.fields["league"].empty_label = "Sin liga (partida casual)"
+        self.fields["played_on"].input_formats = [
+            "%Y-%m-%d",
+            "%d/%m/%Y",
+            "%d/%m/%y",
+        ]
         if not self.instance.pk:
             self.fields["player_count"].initial = Game.PlayerCount.FOUR
         if self.instance.pk and self.instance.duration_minutes:
@@ -230,11 +238,21 @@ class GameAllianceForm(forms.Form):
 
     def __init__(self, *args, player_names=None, initial_assignments=None, **kwargs):
         super().__init__(*args, **kwargs)
-        names = sorted({n.strip() for n in (player_names or []) if n and n.strip()})
+        names = {n.strip() for n in (player_names or []) if n and n.strip()}
+        if initial_assignments:
+            for holder in initial_assignments.values():
+                if holder and holder.strip():
+                    names.add(holder.strip())
+        if self.is_bound:
+            for field_name, _label in GameResult.ALLIANCE_FIELDS:
+                val = (self.data.get(field_name) or "").strip()
+                if val:
+                    names.add(val)
+        names = sorted(names)
         choices = [("", "— Nadie —")] + [(n, n) for n in names]
         for field in self.fields.values():
             field.choices = choices
-        if initial_assignments:
+        if initial_assignments and not self.is_bound:
             for field_name, holder in initial_assignments.items():
                 if field_name in self.fields and holder:
                     self.fields[field_name].initial = holder

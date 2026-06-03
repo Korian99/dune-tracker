@@ -10,6 +10,7 @@
     {% if league.description %}<p class="lead">{{ league.description }}</p>{% endif %}
   </div>
   <div class="header-actions">
+    <a href="{% url 'games:league_sheet_export' slug=league.slug %}" class="btn btn-ghost">Exportar partidas</a>
     <a href="{% url 'games:league_edit' slug=league.slug %}" class="btn btn-ghost">Editar</a>
     <a href="{% url 'games:create' %}?league={{ league.slug }}" class="btn btn-primary">Registrar partida</a>
   </div>

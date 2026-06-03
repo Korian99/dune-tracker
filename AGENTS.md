@@ -95,6 +95,7 @@ README.md         # developer setup (English)
 | `/leagues/<slug>/` | `league_detail` | League + roster + standings |
 | `/leagues/<slug>/edit/` | `league_edit` | Edit league |
 | `/leagues/<slug>/players/add/` | `league_add_player` | POST add player to roster |
+| `/leagues/<slug>/export/` | `league_sheet_export` | Download games as pipe-delimited text (Google Sheets format) |
 
 ## League scoring
 
@@ -160,6 +161,23 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
 ```
+
+### Sheet import/export (Liga N°1 historical data)
+
+Migration `0005` imports 11 May 2026 games into league slug `liga-n1` when that league exists at migrate time. Otherwise run:
+
+```bash
+python manage.py import_sheet_games --league liga-n1
+```
+
+Export (stdout or file):
+
+```bash
+python manage.py export_sheet_games liga-n1
+python manage.py export_sheet_games liga-n1 -o partidas.txt
+```
+
+League page **Exportar partidas** hits the same format as download. Source data: `games/data/liga_n1_sheet.py`; logic: `games/sheet_io.py`.
 
 ## Deployment
 
