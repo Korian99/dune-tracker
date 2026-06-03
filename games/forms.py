@@ -325,15 +325,18 @@ class BaseGameResultFormSet(forms.BaseInlineFormSet):
     def active_player_names(self):
         return [self._player_label(f) for f in self.forms if self._player_label(f)]
 
-    def clean(self):
-        super().clean()
-        active = [
+    def _active_forms(self):
+        return [
             f
             for f in self.forms
             if f.cleaned_data
             and not f.cleaned_data.get("DELETE")
             and self._player_label(f)
         ]
+
+    def clean(self):
+        super().clean()
+        active = self._active_forms()
         if len(active) < 2:
             raise forms.ValidationError(
                 "Añade al menos dos jugadores con puntos de victoria."

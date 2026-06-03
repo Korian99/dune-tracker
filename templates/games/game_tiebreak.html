@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Desempate — {{ game.played_on }} — Dune Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Partida del {{ game.played_on }}</p>
+    <h1>Resolver empates</h1>
+    <p class="lead">
+      {% if needs_resolution %}
+        Hay jugadores empatados en los PV más altos. Indica cómo desempatar la partida.
+      {% else %}
+        Esta partida ya tiene un desempate guardado (p. ej. importada). Puedes confirmarlo o cambiarlo.
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+{% if form_errors %}
+<div class="form-errors">{{ form_errors }}</div>
+{% endif %}
+
+<form method="post" class="tiebreak-form" id="tiebreak-form">
+  {% csrf_token %}
+
+  {% if winner_group %}
+  <section class="section tiebreak-section tiebreak-section--primary">
+    <h2>Ganador de la partida</h2>
+    <p class="help">
+      {{ winner_group.results|length }} jugadores con <strong>{{ winner_group.vp }} PV</strong>:
+      {{ winner_group.player_names|join:", " }}.
+    </p>
+
+    <div class="tiebreak-options">
+      <label class="tiebreak-option">
+        <input type="radio" name="resolution" value="tie" id="resolution-tie"
+          {% if game.tied_game %}checked{% endif %}>
+        <span class="tiebreak-option__body">
+          <strong>Empate (sin ganador único)</strong>
+          <span class="meta">Ningún jugador suma victoria en estadísticas.</span>
+        </span>
+      </label>
+
+      {% for result in winner_group.results %}
+      <label class="tiebreak-option">
+        <input type="radio" name="resolution" value="winner" class="resolution-winner"
+          data-result-id="{{ result.pk }}"
+          {% if game.designated_winner_id == result.pk %}checked{% endif %}>
+        <span class="tiebreak-option__body">
+          <strong>{{ result.player.name }}</strong> gana el desempate
+          <span class="meta">{{ result.victory_points }} PV · puesto {{ result.placement }}.º</span>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+    <input type="hidden" name="winner_result_id" id="winner_result_id"
+      value="{% if game.designated_winner_id %}{{ game.designated_winner_id }}{% endif %}">
+  </section>
+  {% endif %}
+
+  {% if other_groups %}
+  <section class="section tiebreak-section">
+    <h2>Otros empates en PV</h2>
+    <p class="help">Comparten puesto en la clasificación de la partida; no requieren elegir ganador.</p>
+    <ul class="tiebreak-other-list">
+      {% for group in other_groups %}
+      <li>
+        <strong>{{ group.vp }} PV</strong> — {{ group.player_names|join:", " }}
+        <span class="meta">({{ group.results|length }} jugadores)</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Confirmar</button>
+    {% if can_skip %}
+    <a href="{% url 'games:detail' pk=game.pk %}" class="btn btn-ghost">Dejar como está</a>
+    {% endif %}
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const form = document.getElementById("tiebreak-form");
+  if (!form) return;
+  const hiddenWinner = document.getElementById("winner_result_id");
+  const tieRadio = document.getElementById("resolution-tie");
+  const winnerRadios = form.querySelectorAll(".resolution-winner");
+
+  function onWinnerPick(radio) {
+    if (tieRadio) tieRadio.checked = false;
+    winnerRadios.forEach((r) => {
+      if (r !== radio) r.checked = false;
+    });
+    radio.checked = true;
+    hiddenWinner.value = radio.dataset.resultId;
+  }
+
+  winnerRadios.forEach((radio) => {
+    radio.addEventListener("change", () => onWinnerPick(radio));
+  });
+
+  if (tieRadio) {
+    tieRadio.addEventListener("change", () => {
+      if (tieRadio.checked) {
+        hiddenWinner.value = "";
+        winnerRadios.forEach((r) => { r.checked = false; });
+      }
+    });
+  }
+
+  form.addEventListener("submit", (e) => {
+    const isTie = tieRadio && tieRadio.checked;
+    const hasWinner = hiddenWinner.value;
+    if (!isTie && !hasWinner) {
+      e.preventDefault();
+      alert("Elige un ganador o marca «Empate (sin ganador único)».");
+    }
+  });
+})();
+</script>
+{% endblock %}

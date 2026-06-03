@@ -1,0 +1,9 @@
+{% if result.alliances_held %}
+  <span class="result-alliances">
+    {% for label in result.alliances_held %}
+      <span class="tag tag-alliance">{{ label }}</span>
+    {% endfor %}
+  </span>
+{% else %}
+  <span class="muted">Ninguna</span>
+{% endif %}

@@ -15,6 +15,7 @@
       {% if game.bloodlines %} · Bloodlines{% endif %}
       {% if game.rounds %} · {{ game.rounds }} rondas{% endif %}
       {% if game.formatted_duration %} · {{ game.formatted_duration }}{% endif %}
+      {% if game.winner_summary %} · {{ game.winner_summary }}{% endif %}
     </p>
   </div>
   <div class="header-actions">
@@ -27,15 +28,49 @@
   </div>
 </div>
 
+{% if needs_tiebreak %}
+<section class="flash flash-warning tiebreak-banner">
+  <p>Hay un empate en los PV más altos sin resolver.</p>
+  <a href="{% url 'games:resolve_tie' pk=game.pk %}" class="btn btn-primary">Resolver empate</a>
+</section>
+{% elif has_top_vp_tie %}
+<p class="help">
+  <a href="{% url 'games:resolve_tie' pk=game.pk %}">Revisar o cambiar desempate</a>
+  (útil en partidas importadas con empate en PV máximos).
+</p>
+{% endif %}
+
 {% if alliance_map %}
 <section class="alliance-summary">
-  <h2>Alianzas</h2>
+  <h2>Alianzas por facción</h2>
   <dl class="alliance-dl">
     {% for faction, player in alliance_map.items %}
       <dt>{{ faction }}</dt>
       <dd>{{ player }}</dd>
     {% endfor %}
   </dl>
+</section>
+{% endif %}
+
+{% if game.bloodlines %}
+<section class="bloodlines-detail section">
+  <h2>Sardaukars y alianzas por jugador</h2>
+  <ul class="bloodlines-per-player">
+    {% for result in game.results.all %}
+    <li class="{% if result.is_winner %}row-winner{% endif %}">
+      <span class="bloodlines-player">
+        <strong>{{ result.player.name }}</strong>
+        {% if result.is_winner %}<span class="tag">Ganador</span>{% endif %}
+      </span>
+      <span class="bloodlines-stats">
+        <span class="bloodlines-sardaukar">{{ result.sardaukar_label }}</span>
+        <span class="bloodlines-alliances">
+          {% include "games/_result_alliances.html" %}
+        </span>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
 </section>
 {% endif %}
 
@@ -48,7 +83,7 @@
         <th>Líder</th>
       <th>PV</th>
       {% if league_score_rows %}<th>Pts. liga</th><th>Desglose</th>{% endif %}
-      <th>Sardaukar</th>
+      {% if game.bloodlines %}<th>Sardaukars</th>{% endif %}
       <th>Alianzas</th>
       </tr>
     </thead>
@@ -56,7 +91,10 @@
       {% for result in game.results.all %}
       <tr class="{% if result.is_winner %}row-winner{% endif %}">
         <td data-label="#">{{ result.placement }}</td>
-        <td data-label="Jugador">{{ result.player.name }}{% if result.is_winner %} <span class="tag">Ganador</span>{% endif %}</td>
+        <td data-label="Jugador">
+          {{ result.player.name }}
+          {% if result.is_winner %}<span class="tag">Ganador</span>{% elif game.tied_game and result.in_vp_tie %}<span class="tag tag-sm">Empate</span>{% endif %}
+        </td>
         <td data-label="Líder">{{ result.leader|default:"—" }}</td>
         <td data-label="PV"><strong>{{ result.victory_points }}</strong></td>
         {% if league_score_rows %}
@@ -67,18 +105,20 @@
             {% endif %}
           {% endfor %}
         {% endif %}
-        <td data-label="Sardaukar">{{ result.sardaukar_count }}</td>
-        <td data-label="Alianzas">{% if result.alliances_held %}{{ result.alliances_held|join:", " }}{% else %}—{% endif %}</td>
+        {% if game.bloodlines %}
+        <td data-label="Sardaukars">{{ result.sardaukar_label }}</td>
+        {% endif %}
+        <td data-label="Alianzas">{% include "games/_result_alliances.html" %}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 
-{% if game.notes %}
+{% if game.notes_for_display %}
 <section class="notes">
   <h2>Notas</h2>
-  <p>{{ game.notes|linebreaksbr }}</p>
+  <p>{{ game.notes_for_display|linebreaksbr }}</p>
 </section>
 {% endif %}
 

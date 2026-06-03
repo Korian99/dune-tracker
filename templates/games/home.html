@@ -57,11 +57,9 @@
           {% if game.rounds %} · {{ game.rounds }} rondas{% endif %}
           {% if game.formatted_duration %} · {{ game.formatted_duration }}{% endif %}
         </p>
-        {% with winner=game.winner %}
-          {% if winner %}
-            <p class="card-winner">{{ winner.player.name }} · {{ winner.victory_points }} PV</p>
-          {% endif %}
-        {% endwith %}
+        {% if game.winner_summary %}
+          <p class="card-winner">{{ game.winner_summary }}</p>
+        {% endif %}
       </a>
       <a href="{% url 'games:edit' pk=game.pk %}" class="card-edit-link">Editar partida</a>
     </article>

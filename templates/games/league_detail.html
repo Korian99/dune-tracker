@@ -128,7 +128,7 @@
         <li class="{% if row.is_winner %}game-player-scores__winner{% endif %}">
           <span class="game-player-scores__name">
             {{ row.player_name }}
-            {% if row.is_winner %}<span class="tag tag-sm">Ganador</span>{% endif %}
+            {% if row.is_winner %}<span class="tag tag-sm">Ganador</span>{% elif game.tied_game and row.in_vp_tie %}<span class="tag tag-sm">Empate</span>{% endif %}
           </span>
           <span class="game-player-scores__stats">
             {{ row.victory_points }} PV · {{ row.placement }}.º

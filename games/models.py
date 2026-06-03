@@ -167,6 +167,17 @@ class Game(models.Model):
         help_text="Total table time in minutes",
     )
     notes = models.TextField(blank=True)
+    tied_game = models.BooleanField(
+        default=False,
+        help_text="No single winner (VP tie acknowledged)",
+    )
+    designated_winner = models.ForeignKey(
+        "GameResult",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="designated_win_for_game",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -175,9 +186,45 @@ class Game(models.Model):
     def __str__(self):
         return f"Partida {self.played_on} ({self.get_base_game_display()})"
 
+    def max_vp_results(self):
+        """All results tied for highest VP in this game."""
+        results = list(self.results.select_related("player"))
+        if not results:
+            return []
+        max_vp = max(r.victory_points for r in results)
+        return [r for r in results if r.victory_points == max_vp]
+
+    def resolved_winner(self):
+        """Single winner, or None if tie / unresolved multi-way tie."""
+        if self.tied_game:
+            return None
+        if self.designated_winner_id:
+            return self.designated_winner
+        leaders = self.max_vp_results()
+        if len(leaders) == 1:
+            return leaders[0]
+        return None
+
     @property
     def winner(self):
-        return self.results.order_by("-victory_points", "id").first()
+        return self.resolved_winner()
+
+    @property
+    def winner_summary(self):
+        """Spanish one-line winner label for lists."""
+        if self.tied_game:
+            leaders = self.max_vp_results()
+            if len(leaders) >= 2:
+                names = ", ".join(r.player.name for r in leaders)
+                return f"Empate ({names})"
+            return "Empate"
+        w = self.resolved_winner()
+        if w:
+            return f"{w.player.name} ({w.victory_points} PV)"
+        leaders = self.max_vp_results()
+        if len(leaders) >= 2:
+            return "Empate sin resolver"
+        return ""
 
     @property
     def formatted_duration(self):
@@ -189,6 +236,14 @@ class Game(models.Model):
         if hours:
             return f"{hours} h"
         return f"{minutes} min"
+
+    @property
+    def notes_for_display(self):
+        """Hide internal import markers from the game detail page."""
+        notes = (self.notes or "").strip()
+        if notes.startswith("import_key="):
+            return ""
+        return notes
 
 
 class GameResult(models.Model):
@@ -247,9 +302,24 @@ class GameResult(models.Model):
 
     @property
     def is_winner(self):
-        top = self.game.results.order_by("-victory_points", "id").first()
-        return top and top.pk == self.pk
+        winner = self.game.resolved_winner()
+        return winner is not None and winner.pk == self.pk
+
+    @property
+    def in_vp_tie(self):
+        """True if this result shares the highest VP (for tie display)."""
+        return self in self.game.max_vp_results()
 
     @property
     def alliances_held(self):
         return [label for field, label in self.ALLIANCE_FIELDS if getattr(self, field)]
+
+    @property
+    def sardaukar_label(self) -> str:
+        """Spanish label for detail views."""
+        count = self.sardaukar_count
+        if count == 0:
+            return "Ninguno"
+        if count == 1:
+            return "1 Sardaukar"
+        return f"{count} Sardaukars"

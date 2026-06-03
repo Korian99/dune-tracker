@@ -324,6 +324,45 @@ class GameEditTests(TestCase):
         self.assertEqual(results[1].victory_points, 7)
 
 
+class GameWinnerTests(TestCase):
+    def setUp(self):
+        self.league = League.objects.create(name="Liga", slug="liga-w")
+        self.game = Game.objects.create(
+            league=self.league,
+            played_on=date.today(),
+            player_count=2,
+        )
+        self.ana = resolve_player("Ana", league=self.league)
+        self.bob = resolve_player("Bob", league=self.league)
+        self.r_ana = GameResult.objects.create(
+            game=self.game, player=self.ana, victory_points=10
+        )
+        self.r_bob = GameResult.objects.create(
+            game=self.game, player=self.bob, victory_points=10
+        )
+
+    def test_vp_tie_without_designation_has_no_winner(self):
+        self.game.designated_winner = None
+        self.game.tied_game = False
+        self.game.save()
+        self.assertIsNone(self.game.resolved_winner())
+        self.assertFalse(self.r_ana.is_winner)
+        self.assertFalse(self.r_bob.is_winner)
+
+    def test_designated_winner_breaks_tie(self):
+        self.game.designated_winner = self.r_bob
+        self.game.save()
+        self.assertFalse(self.r_ana.is_winner)
+        self.assertTrue(self.r_bob.is_winner)
+
+    def test_tied_game_flag(self):
+        self.game.tied_game = True
+        self.game.designated_winner = None
+        self.game.save()
+        self.assertIsNone(self.game.resolved_winner())
+        self.assertIn("Empate", self.game.winner_summary)
+
+
 class ApplyAlliancesTests(TestCase):
     def test_apply_alliances_moves_holder(self):
         league = League.objects.create(name="L", slug="apply-l")

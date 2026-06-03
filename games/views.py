@@ -16,6 +16,13 @@ from .forms import (
 )
 from .models import Game, GameResult, League
 from .sheet_io import export_league_sheet
+from .tiebreak import (
+    apply_tiebreak,
+    game_needs_tiebreak,
+    has_top_vp_tie,
+    normalize_winner_after_save,
+    vp_tie_groups,
+)
 from .scoring import (
     DEFAULT_SCORING_NOTES,
     breakdown_display,
@@ -99,10 +106,19 @@ def _alliance_form_for_request(request, formset, game=None, league=None):
     return GameAllianceForm(player_names=names, initial_assignments=initial)
 
 
+def _redirect_after_game_save(game):
+    """Always revisit tiebreak when top VP is shared (incl. imported / backfilled games)."""
+    game.refresh_from_db()
+    normalize_winner_after_save(game)
+    if has_top_vp_tie(game):
+        return redirect("games:resolve_tie", pk=game.pk)
+    return redirect("games:detail", pk=game.pk)
+
+
 def _games_queryset(league_slug=None):
-    qs = Game.objects.select_related("league").prefetch_related(
-        "results__player"
-    )
+    qs = Game.objects.select_related(
+        "league", "designated_winner__player"
+    ).prefetch_related("results__player")
     if league_slug:
         qs = qs.filter(league__slug=league_slug)
     return qs
@@ -154,7 +170,9 @@ def game_list(request):
 
 def game_detail(request, pk):
     game = get_object_or_404(
-        Game.objects.select_related("league").prefetch_related("results__player"),
+        Game.objects.select_related(
+            "league", "designated_winner__player"
+        ).prefetch_related("results__player"),
         pk=pk,
     )
     alliance_map = _alliance_map_for_game(game)
@@ -178,6 +196,9 @@ def game_detail(request, pk):
             "game": game,
             "alliance_map": alliance_map,
             "league_score_rows": league_score_rows,
+            "needs_tiebreak": game_needs_tiebreak(game),
+            "has_top_vp_tie": has_top_vp_tie(game),
+            "tie_groups": vp_tie_groups(game),
         },
     )
 
@@ -215,7 +236,7 @@ def game_create(request):
             for f in formset.forms:
                 f.league = game.league
             _save_results(formset, alliance_form.cleaned_data)
-            return redirect("games:detail", pk=game.pk)
+            return _redirect_after_game_save(game)
     else:
         initial = {
             "played_on": date.today(),
@@ -277,7 +298,7 @@ def game_edit(request, pk):
             for f in formset.forms:
                 f.league = game.league
             _save_results(formset, alliance_form.cleaned_data)
-            return redirect("games:detail", pk=game.pk)
+            return _redirect_after_game_save(game)
     else:
         form = GameForm(instance=game)
         formset = _formset_for_game(game=game)
@@ -297,6 +318,61 @@ def game_edit(request, pk):
             "alliance_form": alliance_form,
             "is_edit": True,
             "game": game,
+        },
+    )
+
+
+@require_http_methods(["GET", "POST"])
+def game_resolve_tie(request, pk):
+    game = get_object_or_404(
+        Game.objects.select_related("league", "designated_winner__player").prefetch_related(
+            "results__player"
+        ),
+        pk=pk,
+    )
+    groups = vp_tie_groups(game)
+    winner_group = next((g for g in groups if g["is_winner_group"]), None)
+    other_groups = [g for g in groups if not g["is_winner_group"]]
+
+    if not groups:
+        return redirect("games:detail", pk=game.pk)
+
+    if request.method == "POST":
+        resolution = request.POST.get("resolution", "").strip()
+        winner_id = request.POST.get("winner_result_id", "").strip() or None
+        form_errors = None
+        try:
+            apply_tiebreak(game, resolution, winner_id)
+        except ValueError as exc:
+            form_errors = str(exc)
+        else:
+            messages.success(request, "Desempate guardado.")
+            return redirect("games:detail", pk=game.pk)
+
+        return _render_tiebreak_page(
+            request,
+            game,
+            winner_group,
+            other_groups,
+            form_errors=form_errors,
+        )
+
+    return _render_tiebreak_page(request, game, winner_group, other_groups)
+
+
+def _render_tiebreak_page(
+    request, game, winner_group, other_groups, form_errors=None
+):
+    return render(
+        request,
+        "games/game_tiebreak.html",
+        {
+            "game": game,
+            "winner_group": winner_group,
+            "other_groups": other_groups,
+            "needs_resolution": game_needs_tiebreak(game),
+            "can_skip": not game_needs_tiebreak(game),
+            "form_errors": form_errors,
         },
     )
 
@@ -347,7 +423,9 @@ def league_list(request):
 
 def league_detail(request, slug):
     league = get_object_or_404(League, slug=slug)
-    games = league.games.prefetch_related("results__player")
+    games = league.games.select_related(
+        "designated_winner__player"
+    ).prefetch_related("results__player")
     scoring_config = resolve_scoring_config(league)
     standings = league_standings(league)
     roster = league.players.order_by("name")

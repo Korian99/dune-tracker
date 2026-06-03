@@ -42,11 +42,7 @@
         </td>
         <td data-label="Rondas">{{ game.rounds|default:"—" }}</td>
         <td data-label="Duración">{{ game.formatted_duration|default:"—" }}</td>
-        <td data-label="Ganador">
-          {% with w=game.winner %}
-            {% if w %}{{ w.player.name }} ({{ w.victory_points }} PV){% else %}—{% endif %}
-          {% endwith %}
-        </td>
+        <td data-label="Ganador">{{ game.winner_summary|default:"—" }}</td>
         <td data-label="" class="row-actions">
           <a href="{% url 'games:detail' pk=game.pk %}">Detalle</a>
           · <a href="{% url 'games:edit' pk=game.pk %}">Editar</a>

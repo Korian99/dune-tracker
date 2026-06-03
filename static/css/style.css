@@ -662,6 +662,94 @@ h2 {
   margin: 0;
 }
 
+.bloodlines-detail h2 {
+  font-size: 1rem;
+  color: var(--sand);
+  margin: 0 0 0.65rem;
+}
+
+.bloodlines-per-player {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.bloodlines-per-player li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.bloodlines-per-player li:last-child {
+  border-bottom: none;
+}
+
+.bloodlines-per-player li.row-winner {
+  background: rgba(212, 132, 44, 0.08);
+}
+
+.bloodlines-player {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.bloodlines-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.85rem;
+  font-size: 0.9rem;
+}
+
+.bloodlines-sardaukar {
+  color: var(--sand);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bloodlines-alliances .result-alliances {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.result-alliances {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  justify-content: flex-end;
+}
+
+.tag-alliance {
+  background: rgba(212, 132, 44, 0.15);
+  border: 1px solid rgba(212, 132, 44, 0.35);
+  color: var(--sand);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.data-table td .result-alliances {
+  justify-content: flex-start;
+}
+
+@media (max-width: 640px) {
+  .bloodlines-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 .scoring-notes {
   font-size: 0.95rem;
   color: var(--muted);
@@ -772,6 +860,31 @@ h2 {
 .result-row .field-vp input,
 .result-row .field-sard input {
   max-width: 100%;
+}
+
+.result-row .field-winner label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.field-tie {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--panel-border);
+}
+
+.field-tie label {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.field-tie input {
+  margin-right: 0.4rem;
 }
 
 .stats-filter {
@@ -928,6 +1041,72 @@ h2 {
   border-radius: var(--radius);
   margin-bottom: 1rem;
   font-size: 0.95rem;
+}
+
+.flash-warning {
+  background: rgba(212, 132, 44, 0.15);
+  border: 1px solid var(--spice);
+  color: var(--text);
+}
+
+.tiebreak-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tiebreak-section {
+  margin-bottom: 1.25rem;
+}
+
+.tiebreak-section--primary {
+  border: 1px solid var(--spice);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: rgba(212, 132, 44, 0.08);
+}
+
+.tiebreak-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tiebreak-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--panel-border);
+  cursor: pointer;
+}
+
+.tiebreak-option:has(input:checked) {
+  border-color: var(--spice);
+}
+
+.tiebreak-option input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.tiebreak-option__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tiebreak-other-list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.tiebreak-other-list li {
+  margin-bottom: 0.35rem;
 }
 
 /* ——— Mobile: collapsible nav ——— */
