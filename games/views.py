@@ -1,7 +1,7 @@
 from datetime import date
 
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
@@ -410,7 +410,7 @@ def stats(request):
 
 
 def league_list(request):
-    leagues = League.objects.annotate(game_count=Count("games"))
+    leagues = League.objects.all()
     return render(request, "games/league_list.html", {"leagues": leagues})
 
 
