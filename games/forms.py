@@ -2,6 +2,7 @@ from django import forms
 from django.forms import inlineformset_factory
 
 from .models import Game, GameResult, League
+from .scoring import DEFAULT_SCORING_NOTES
 
 LEADER_SUGGESTIONS = [
     "Paul Atreides",
@@ -35,7 +36,7 @@ class LeagueForm(forms.ModelForm):
             "scoring_notes": forms.Textarea(
                 attrs={
                     "rows": 5,
-                    "placeholder": "Describe aquí el sistema de puntos de la liga…",
+                    "placeholder": DEFAULT_SCORING_NOTES.strip()[:120] + "…",
                 }
             ),
         }

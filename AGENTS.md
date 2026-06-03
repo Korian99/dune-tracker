@@ -20,7 +20,7 @@ Product names stay as published: *Dune: Imperium*, *Uprising*, *Bloodlines*, fac
 
 ## Project summary
 
-Django web app to log **Dune: Imperium — Uprising** (+ **Bloodlines**) board game sessions: players, leaders, VP, alliances, Sardaukar counts, rounds, duration, and **leagues** with custom scoring (rules TBD).
+Django web app to log **Dune: Imperium — Uprising** (+ **Bloodlines**) board game sessions: players, leaders, VP, alliances, Sardaukar counts, rounds, duration, and **leagues** with standard placement + bonus scoring (`games/scoring.py`).
 
 Stack: Django 5, SQLite (local) / PostgreSQL (Render), WhiteNoise, Gunicorn.
 
@@ -32,7 +32,7 @@ games/            # main app
   models.py       # League, Game, GameResult
   forms.py        # GameForm, GameResultFormSet, LeagueForm (Spanish UI strings)
   views.py        # CRUD + stats
-  scoring.py      # League points (placeholder until scoring_config defined)
+  scoring.py      # League points (standard + victory_points override)
   urls.py
 templates/games/  # Spanish UI
 static/css/       # style.css
@@ -46,7 +46,7 @@ README.md         # developer setup (English)
 
 - Groups games under shared rules.
 - `scoring_notes` — human-readable rules (Spanish prose from users).
-- `scoring_config` — JSON for automated scoring (implement in `games/scoring.py` when rules are defined).
+- `scoring_config` — JSON (`system`: `standard` or `victory_points`); see League scoring below.
 
 ### `Game`
 
@@ -76,16 +76,41 @@ README.md         # developer setup (English)
 | `/leagues/<slug>/` | `league_detail` | League + standings |
 | `/leagues/<slug>/edit/` | `league_edit` | Edit league |
 
-## League scoring (TODO)
+## League scoring
 
-Implement custom logic in `games/scoring.py`:
+Implemented in `games/scoring.py`:
 
-- `compute_league_points(result, league)` — points for one player in one game
-- `league_standings(league)` — aggregated table
+- `compute_league_points(result, league)` — total points for one player in one game
+- `compute_league_points_breakdown(result, league)` — components (placement, bonuses)
+- `league_standings(league)` — aggregated table sorted by points, wins, avg VP
 
-Current default: placement points `{1: 3, 2: 2, 3: 1}` unless `league.scoring_config["system"] == "victory_points"`.
+### Standard system (default)
 
-When the user provides rules, document the `scoring_config` JSON schema here and implement the branch.
+Used when `scoring_config` is empty or `system` is omitted / `"standard"`:
+
+| Component | Rule |
+|-----------|------|
+| Placement | By `GameResult.placement` (VP competition ranking): 1st=5, 2nd=3, 3rd=2, 4th=1, 5th+=0 |
+| Early win | +1 if player ties for highest VP in the game **and** `game.rounds` is 1–6 (round 7+ does not qualify; `rounds` null = no bonus) |
+| VP thresholds | +1 if VP ≥ 10, +1 if VP ≥ 12, +1 if VP ≥ 15 (stacking) |
+
+**Ties:** Placement uses competition ranking (tied VP → same rank; next rank skips). Early-win uses max VP, not `is_winner` (which breaks ties by lowest `id`).
+
+Default Spanish copy for new leagues: `DEFAULT_SCORING_NOTES` in `scoring.py` (pre-filled on league create).
+
+### `scoring_config` JSON
+
+```json
+{ "system": "standard" }
+```
+
+or empty `{}` — rules above.
+
+```json
+{ "system": "victory_points" }
+```
+
+League points per game = `victory_points` (no placement or bonuses).
 
 ## Conventions
 

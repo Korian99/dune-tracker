@@ -7,7 +7,12 @@ from django.views.decorators.http import require_http_methods
 
 from .forms import GameForm, GameResultFormSet, LEADER_SUGGESTIONS, LeagueForm
 from .models import Game, GameResult, League
-from .scoring import league_standings
+from .scoring import (
+    DEFAULT_SCORING_NOTES,
+    breakdown_display,
+    compute_league_points_breakdown,
+    league_standings,
+)
 
 
 def _save_results(formset):
@@ -64,10 +69,27 @@ def game_detail(request, pk):
         pk=pk,
     )
     alliance_map = _alliance_map_for_game(game)
+    league_score_rows = None
+    if game.league_id:
+        league_score_rows = []
+        for result in game.results.all():
+            breakdown = compute_league_points_breakdown(result, game.league)
+            league_score_rows.append(
+                {
+                    "result": result,
+                    "breakdown": breakdown,
+                    "formula": breakdown_display(breakdown),
+                    "total": breakdown["total"],
+                }
+            )
     return render(
         request,
         "games/game_detail.html",
-        {"game": game, "alliance_map": alliance_map},
+        {
+            "game": game,
+            "alliance_map": alliance_map,
+            "league_score_rows": league_score_rows,
+        },
     )
 
 
@@ -249,7 +271,9 @@ def league_create(request):
             league = form.save()
             return redirect("games:league_detail", slug=league.slug)
     else:
-        form = LeagueForm()
+        form = LeagueForm(
+            initial={"scoring_notes": DEFAULT_SCORING_NOTES.strip()}
+        )
     return render(request, "games/league_form.html", {"form": form, "is_edit": False})
 
 
