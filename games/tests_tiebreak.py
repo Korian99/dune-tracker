@@ -4,6 +4,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .models import Game, GameResult, League, resolve_player
+from .scoring import compute_league_points_breakdown
 from .tiebreak import (
     apply_tiebreak,
     game_needs_tiebreak,
@@ -50,6 +51,19 @@ class TiebreakLogicTests(TestCase):
         self.game.refresh_from_db()
         self.assertFalse(self.game.tied_game)
         self.assertTrue(leaders[0].is_winner)
+        loser = leaders[1]
+        self.assertEqual(leaders[0].placement, 1)
+        self.assertEqual(loser.placement, 2)
+        self.assertEqual(
+            compute_league_points_breakdown(leaders[0], self.league)[
+                "placement_points"
+            ],
+            5,
+        )
+        self.assertEqual(
+            compute_league_points_breakdown(loser, self.league)["placement_points"],
+            3,
+        )
 
         apply_tiebreak(self.game, "tie", None)
         self.game.refresh_from_db()

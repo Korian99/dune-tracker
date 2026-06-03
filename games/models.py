@@ -295,10 +295,21 @@ class GameResult(models.Model):
 
     @property
     def placement(self):
-        higher = self.game.results.filter(
-            victory_points__gt=self.victory_points
-        ).count()
-        return higher + 1
+        """Competition rank by VP; after tiebreak, only the winner is 1st."""
+        results = list(self.game.results.all())
+        higher = sum(1 for r in results if r.victory_points > self.victory_points)
+        base = higher + 1
+        if self.game.tied_game:
+            return base
+        winner = self.game.resolved_winner()
+        if winner is None:
+            return base
+        max_vp = max((r.victory_points for r in results), default=0)
+        if self.victory_points != max_vp:
+            return base
+        if self.pk == winner.pk:
+            return 1
+        return 2
 
     @property
     def is_winner(self):

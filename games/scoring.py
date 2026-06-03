@@ -96,13 +96,21 @@ def _config_system(config: dict[str, Any]) -> str:
 
 
 def _has_highest_vp(result: GameResult) -> bool:
-    """True if this result ties for the game maximum VP (not pk tie-break)."""
+    """True if this result qualifies for the early-win bonus."""
     max_vp = (
         result.game.results.order_by("-victory_points")
         .values_list("victory_points", flat=True)
         .first()
     )
-    return max_vp is not None and result.victory_points == max_vp
+    if max_vp is None or result.victory_points != max_vp:
+        return False
+    game = result.game
+    if game.tied_game:
+        return False
+    winner = game.resolved_winner()
+    if winner is not None:
+        return result.pk == winner.pk
+    return True
 
 
 def _vp_threshold_bonuses(vp: int, thresholds: list[int]) -> int:
@@ -115,8 +123,9 @@ def compute_league_points_breakdown(
     """
     Per-game league points with components.
 
-    Ties (placement): GameResult.placement — competition ranking by VP.
-    Ties (early-win): all players at max VP qualify (not is_winner pk tie-break).
+    Ties (placement): competition by VP; designated winner is 1st, other
+    max-VP players are 2nd. Declared ties (tied_game) keep shared ranks.
+    Early-win: designated winner only; unresolved VP ties use all at max VP.
     """
     config = resolve_scoring_config(league)
 

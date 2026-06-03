@@ -355,6 +355,25 @@ class GameWinnerTests(TestCase):
         self.assertFalse(self.r_ana.is_winner)
         self.assertTrue(self.r_bob.is_winner)
 
+    def test_designated_winner_gets_first_place_scoring(self):
+        self.game.rounds = 5
+        self.game.designated_winner = self.r_bob
+        self.game.save()
+        self.assertEqual(self.r_bob.placement, 1)
+        self.assertEqual(self.r_ana.placement, 2)
+        bob_pts = compute_league_points_breakdown(self.r_bob, self.league)
+        ana_pts = compute_league_points_breakdown(self.r_ana, self.league)
+        self.assertEqual(bob_pts["placement_points"], 5)
+        self.assertEqual(ana_pts["placement_points"], 3)
+        self.assertEqual(bob_pts["early_win"], 1)
+        self.assertEqual(ana_pts["early_win"], 0)
+
+    def test_unresolved_vp_tie_shares_first_place(self):
+        self.assertEqual(self.r_ana.placement, 1)
+        self.assertEqual(self.r_bob.placement, 1)
+        ana_pts = compute_league_points_breakdown(self.r_ana, self.league)
+        self.assertEqual(ana_pts["placement_points"], 5)
+
     def test_tied_game_flag(self):
         self.game.tied_game = True
         self.game.designated_winner = None
