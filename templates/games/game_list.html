@@ -47,7 +47,10 @@
             {% if w %}{{ w.player.name }} ({{ w.victory_points }} PV){% else %}—{% endif %}
           {% endwith %}
         </td>
-        <td data-label=""><a href="{% url 'games:detail' pk=game.pk %}">Detalle</a></td>
+        <td data-label="" class="row-actions">
+          <a href="{% url 'games:detail' pk=game.pk %}">Detalle</a>
+          · <a href="{% url 'games:edit' pk=game.pk %}">Editar</a>
+        </td>
       </tr>
       {% endfor %}
     </tbody>

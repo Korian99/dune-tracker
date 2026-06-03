@@ -351,6 +351,34 @@ h2 {
   text-decoration: none;
 }
 
+.card-with-actions {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.card-with-actions .card-link {
+  flex: 1;
+  padding: 1rem 1.1rem 0.5rem;
+}
+
+.card-edit-link {
+  display: block;
+  padding: 0.5rem 1.1rem 0.85rem;
+  font-size: 0.9rem;
+  color: var(--spice-bright);
+  text-decoration: none;
+  border-top: 1px solid var(--panel-border);
+}
+
+.card-edit-link:hover {
+  text-decoration: underline;
+}
+
+.row-actions {
+  white-space: nowrap;
+}
+
 .card-top {
   display: flex;
   justify-content: space-between;

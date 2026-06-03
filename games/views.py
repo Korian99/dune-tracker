@@ -244,8 +244,16 @@ def game_edit(request, pk):
     game = get_object_or_404(Game, pk=pk)
     if request.method == "POST":
         form = GameForm(request.POST, instance=game)
+        league_for_formset = _league_from_form(form) or game.league
+        if form.is_valid():
+            league_for_formset = form.cleaned_data.get("league") or league_for_formset
         formset = _formset_for_game(game=game, data=request.POST)
-        alliance_form = _alliance_form_for_request(request, formset, game=game)
+        formset.league = league_for_formset
+        for f in formset.forms:
+            f.league = league_for_formset
+        alliance_form = _alliance_form_for_request(
+            request, formset, game=game, league=league_for_formset
+        )
         if form.is_valid() and formset.is_valid() and alliance_form.is_valid():
             game = form.save()
             formset.league = game.league
@@ -256,7 +264,12 @@ def game_edit(request, pk):
     else:
         form = GameForm(instance=game)
         formset = _formset_for_game(game=game)
-        alliance_form = _alliance_form_for_request(request, formset, game=game)
+        formset.league = game.league
+        for f in formset.forms:
+            f.league = game.league
+        alliance_form = _alliance_form_for_request(
+            request, formset, game=game, league=game.league
+        )
 
     return render(
         request,

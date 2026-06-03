@@ -239,21 +239,6 @@ class GameAllianceForm(forms.Form):
                 if field_name in self.fields and holder:
                     self.fields[field_name].initial = holder
 
-    def clean(self):
-        cleaned = super().clean()
-        holders = []
-        for field, label in GameResult.ALLIANCE_FIELDS:
-            name = cleaned.get(field, "").strip()
-            if not name:
-                continue
-            if name in holders:
-                raise forms.ValidationError(
-                    f"{name} no puede tener más de una alianza."
-                )
-            holders.append(name)
-        return cleaned
-
-
 class GameResultForm(forms.ModelForm):
     player_pick = forms.ChoiceField(
         label="Jugador",

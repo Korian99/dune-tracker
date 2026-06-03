@@ -18,7 +18,7 @@
     </p>
   </div>
   <div class="header-actions">
-    <a href="{% url 'games:edit' pk=game.pk %}" class="btn btn-ghost">Editar</a>
+    <a href="{% url 'games:edit' pk=game.pk %}" class="btn btn-primary">Editar partida</a>
     <form method="post" action="{% url 'games:delete' pk=game.pk %}" class="inline-form"
           onsubmit="return confirm('¿Eliminar esta partida?');">
       {% csrf_token %}

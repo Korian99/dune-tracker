@@ -1,7 +1,9 @@
 from datetime import date, timedelta
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from django.urls import reverse
 
+from .forms import GameAllianceForm
 from .models import Game, GameResult, League, Player, resolve_player
 from .scoring import (
     compute_league_points,
@@ -181,3 +183,92 @@ class PlayerModelTests(TestCase):
         p1 = resolve_player("Bob")
         p2 = resolve_player("Bob")
         self.assertEqual(p1.pk, p2.pk)
+
+
+@override_settings(
+    STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+)
+class GameEditTests(TestCase):
+    def setUp(self):
+        self.league = League.objects.create(name="Liga", slug="liga")
+        self.game = Game.objects.create(
+            league=self.league,
+            played_on=date.today(),
+            player_count=2,
+        )
+        for name, vp in [("Ana", 10), ("Bob", 8)]:
+            player = resolve_player(name, league=self.league)
+            GameResult.objects.create(
+                game=self.game, player=player, victory_points=vp
+            )
+
+    def test_edit_page_loads_with_existing_results(self):
+        url = reverse("games:edit", kwargs={"pk": self.game.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Editar partida")
+        self.assertContains(response, "Ana")
+        self.assertContains(response, "Bob")
+
+    def test_edit_updates_victory_points(self):
+        url = reverse("games:edit", kwargs={"pk": self.game.pk})
+        get_response = self.client.get(url)
+        self.assertEqual(get_response.status_code, 200)
+        results = list(self.game.results.order_by("pk"))
+        data = {
+            "league": str(self.league.pk),
+            "played_on": str(self.game.played_on),
+            "player_count": "2",
+            "duration_hours": "",
+            "duration_minutes_part": "",
+            "rounds": "",
+            "notes": "",
+            "results-TOTAL_FORMS": get_response.context["formset"].total_form_count(),
+            "results-INITIAL_FORMS": get_response.context["formset"].initial_form_count(),
+            "results-MIN_NUM_FORMS": "0",
+            "results-MAX_NUM_FORMS": "6",
+            "results-0-id": str(results[0].pk),
+            "results-0-player_pick": "Ana",
+            "results-0-leader": "",
+            "results-0-victory_points": "11",
+            "results-0-sardaukar_count": "0",
+            "results-1-id": str(results[1].pk),
+            "results-1-player_pick": "Bob",
+            "results-1-leader": "",
+            "results-1-victory_points": "7",
+            "results-1-sardaukar_count": "0",
+            "alliance_emperor": "",
+            "alliance_guild": "",
+            "alliance_bene_gesserit": "",
+            "alliance_fremen": "",
+        }
+        for i in range(2, data["results-TOTAL_FORMS"]):
+            data[f"results-{i}-player_pick"] = ""
+            data[f"results-{i}-leader"] = ""
+            data[f"results-{i}-victory_points"] = ""
+            data[f"results-{i}-sardaukar_count"] = "0"
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302, response.context)
+        results[0].refresh_from_db()
+        results[1].refresh_from_db()
+        self.assertEqual(results[0].victory_points, 11)
+        self.assertEqual(results[1].victory_points, 7)
+
+
+class GameAllianceFormTests(TestCase):
+    def test_same_player_can_hold_all_alliances(self):
+        form = GameAllianceForm(
+            data={
+                "alliance_emperor": "Kori",
+                "alliance_guild": "Kori",
+                "alliance_bene_gesserit": "Kori",
+                "alliance_fremen": "Kori",
+            },
+            player_names=["Kori", "Alex"],
+        )
+        self.assertTrue(form.is_valid(), form.errors)

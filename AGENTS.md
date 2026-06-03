@@ -69,7 +69,7 @@ README.md         # developer setup (English)
 
 - `player` FK (required), `leader`, `victory_points`
 - `sardaukar_count` — Bloodlines Sardaukar commanders (0–14)
-- Alliance booleans (one player per faction per game): `alliance_emperor`, `alliance_guild`, `alliance_bene_gesserit`, `alliance_fremen`
+- Alliance booleans per result row: `alliance_emperor`, `alliance_guild`, `alliance_bene_gesserit`, `alliance_fremen`. `GameAllianceForm` assigns one holder per faction; the same player may hold any number of factions (including all four).
 - `ALLIANCE_FIELDS` — list of `(field_name, Spanish label)` for forms and display
 - Unique per game: `(game, player)`
 
