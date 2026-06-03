@@ -77,7 +77,40 @@
     </div>
   </fieldset>
 
-  {% if is_edit and form.powerscore_value %}
+  {% if is_edit %}
+  <fieldset class="form-section roster-edit-section">
+    <legend>Plantel</legend>
+    <p class="help">Jugadores que pueden aparecer al registrar partidas de esta liga.</p>
+    {% if roster %}
+    <ul class="roster-edit-list">
+      {% for player in roster %}
+      <li class="roster-edit-list__item">
+        <span class="roster-edit-list__name">{{ player.name }}</span>
+        <form method="post"
+              action="{% url 'games:league_remove_player' slug=league.slug player_id=player.pk %}"
+              class="inline-form roster-edit-list__remove"
+              onsubmit="return confirm('¿Quitar a «{{ player.name }}» del plantel?');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-ghost btn-sm">Quitar</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="help">Aún no hay jugadores en el plantel.</p>
+    {% endif %}
+    <form method="post" action="{% url 'games:league_add_player' slug=league.slug %}" class="inline-add-player">
+      {% csrf_token %}
+      <div class="field-row">
+        {{ add_player_form.name.label_tag }}
+        {{ add_player_form.name }}
+        <button type="submit" class="btn btn-ghost">Añadir jugador</button>
+      </div>
+      {{ add_player_form.name.errors }}
+    </form>
+  </fieldset>
+
+  {% if form.powerscore_value %}
   <fieldset class="form-section">
     <legend>Hitos</legend>
     <p class="help">Highscore y Lowscore se calculan solos (máx. y mín. PV). Edita Powerscore aquí.</p>
@@ -93,6 +126,7 @@
       {{ form.powerscore_player.errors }}
     </div>
   </fieldset>
+  {% endif %}
   {% endif %}
 
   <div class="form-actions">

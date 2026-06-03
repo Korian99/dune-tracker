@@ -81,7 +81,7 @@ README.md         # developer setup (English)
 - `ALLIANCE_FIELDS` — list of `(field_name, Spanish label)` for forms and display
 - Unique per game: `(game, player)`
 
-**Game logging UX:** `GameForm` forces Uprising + Bloodlines. Each result row: `player_pick` and `leader` are `<select>` fields enhanced with **Select2** on `game_form.html` (class `enhanced-select`, init in `static/js/enhanced-selects.js`). Alliance holders use the same widget. Players must be chosen from the roster (league plantel or global `Player` list); add names via the league page first.
+**Game logging UX:** `GameForm` forces Uprising + Bloodlines. Each result row: `player_pick` and `leader` are `<select>` fields enhanced with **Select2** on `game_form.html` (class `enhanced-select`, init in `static/js/enhanced-selects.js`). Alliance holders use the same widget. Players must be chosen from the roster (league plantel or global `Player` list); manage the plantel on **Editar liga**.
 
 ### Migration `0004`
 
@@ -100,9 +100,10 @@ README.md         # developer setup (English)
 | `/stats/` | `stats` | Stats explorer (`?leagues=slug&casual=1`; legacy `?league=slug`) |
 | `/leagues/` | `league_list` | Leagues |
 | `/leagues/new/` | `league_create` | Create league |
-| `/leagues/<slug>/` | `league_detail` | League + roster + standings |
-| `/leagues/<slug>/edit/` | `league_edit` | Edit league |
-| `/leagues/<slug>/players/add/` | `league_add_player` | POST add player to roster |
+| `/leagues/<slug>/` | `league_detail` | League standings, hitos, games |
+| `/leagues/<slug>/edit/` | `league_edit` | Edit league, roster, powerscore |
+| `/leagues/<slug>/players/add/` | `league_add_player` | POST add player (redirects to edit) |
+| `/leagues/<slug>/players/<id>/remove/` | `league_remove_player` | POST remove from roster |
 | `/leagues/<slug>/export/` | `league_sheet_export` | Download games as pipe-delimited text (Google Sheets format) |
 
 ## League scoring

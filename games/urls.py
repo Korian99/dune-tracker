@@ -27,4 +27,9 @@ urlpatterns = [
         views.league_add_player,
         name="league_add_player",
     ),
+    path(
+        "leagues/<slug:slug>/players/<int:player_id>/remove/",
+        views.league_remove_player,
+        name="league_remove_player",
+    ),
 ]

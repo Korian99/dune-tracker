@@ -11,32 +11,10 @@
   </div>
   <div class="header-actions">
     <a href="{% url 'games:league_sheet_export' slug=league.slug %}" class="btn btn-ghost">Exportar partidas</a>
-    <a href="{% url 'games:league_edit' slug=league.slug %}" class="btn btn-ghost">Editar</a>
+    <a href="{% url 'games:league_edit' slug=league.slug %}" class="btn btn-ghost">Editar liga</a>
     <a href="{% url 'games:create' %}?league={{ league.slug }}" class="btn btn-primary">Registrar partida</a>
   </div>
 </div>
-
-<section class="section roster-section">
-  <h2>Plantel</h2>
-  {% if roster %}
-  <ul class="roster-list">
-    {% for player in roster %}
-      <li>{{ player.name }}</li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p class="help">Aún no hay jugadores en el plantel.</p>
-  {% endif %}
-  <form method="post" action="{% url 'games:league_add_player' slug=league.slug %}" class="inline-add-player">
-    {% csrf_token %}
-    <div class="field-row">
-      {{ add_player_form.name.label_tag }}
-      {{ add_player_form.name }}
-      <button type="submit" class="btn btn-ghost">Añadir jugador</button>
-    </div>
-    {{ add_player_form.name.errors }}
-  </form>
-</section>
 
 {% if league.scoring_notes %}
 <section class="notes">

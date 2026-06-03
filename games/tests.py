@@ -456,3 +456,44 @@ class LeagueGamesSortTests(TestCase):
         self.assertEqual(oldest.context["games_sort"], "oldest")
         ids_old = [e["game"].pk for e in oldest.context["game_entries"]]
         self.assertEqual(ids_old, [old.pk, new.pk])
+
+
+@override_settings(STORAGES=STORAGES_OVERRIDE)
+class LeagueRosterEditTests(TestCase):
+    def test_roster_on_edit_not_on_detail(self):
+        league = League.objects.create(name="Roster Liga", slug="roster-liga")
+        player = resolve_player("Ana", league=league)
+        client = Client()
+
+        detail = client.get(reverse("games:league_detail", kwargs={"slug": league.slug}))
+        self.assertNotContains(detail, "Añadir jugador")
+        self.assertNotContains(detail, "Plantel")
+
+        edit = client.get(reverse("games:league_edit", kwargs={"slug": league.slug}))
+        self.assertContains(edit, "Plantel")
+        self.assertContains(edit, "Ana")
+        self.assertContains(edit, "Añadir jugador")
+
+        add = client.post(
+            reverse("games:league_add_player", kwargs={"slug": league.slug}),
+            {"name": "Bob"},
+        )
+        self.assertRedirects(
+            add,
+            reverse("games:league_edit", kwargs={"slug": league.slug}),
+        )
+        self.assertTrue(
+            league.players.filter(name="Bob").exists()
+        )
+
+        remove = client.post(
+            reverse(
+                "games:league_remove_player",
+                kwargs={"slug": league.slug, "player_id": player.pk},
+            ),
+        )
+        self.assertRedirects(
+            remove,
+            reverse("games:league_edit", kwargs={"slug": league.slug}),
+        )
+        self.assertFalse(league.players.filter(pk=player.pk).exists())

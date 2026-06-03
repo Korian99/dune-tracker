@@ -1292,6 +1292,35 @@ h2 {
   margin-bottom: 0.25rem;
 }
 
+.roster-edit-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.roster-edit-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+}
+
+.roster-edit-list__name {
+  font-weight: 600;
+}
+
+.btn-sm {
+  min-height: 2rem;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.875rem;
+}
+
 .hitos-grid {
   display: grid;
   gap: 1rem;

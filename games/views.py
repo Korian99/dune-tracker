@@ -14,7 +14,7 @@ from .forms import (
     LeagueForm,
     _player_choice_list,
 )
-from .models import Game, GameResult, League
+from .models import Game, GameResult, League, LeagueMembership
 from .sheet_io import export_league_sheet
 from .tiebreak import (
     apply_tiebreaks_from_post,
@@ -434,8 +434,6 @@ def league_detail(request, slug):
         games = games.order_by("-played_on", "-created_at")
     scoring_config = resolve_scoring_config(league)
     standings = league_standings(league)
-    roster = league.players.order_by("name")
-    add_player_form = LeagueAddPlayerForm()
     game_entries = [
         {"game": game, "player_scores": game_score_summary(game, league)}
         for game in games
@@ -448,8 +446,6 @@ def league_detail(request, slug):
             "game_entries": game_entries,
             "standings": standings,
             "hito_snapshots": league_hito_snapshots(league),
-            "roster": roster,
-            "add_player_form": add_player_form,
             "count_games": scoring_config["count_games"],
             "games_sort": games_sort,
         },
@@ -477,7 +473,19 @@ def league_add_player(request, slug):
     else:
         for err in form.errors.get("name", []):
             messages.error(request, err)
-    return redirect("games:league_detail", slug=slug)
+    return redirect("games:league_edit", slug=slug)
+
+
+@require_http_methods(["POST"])
+def league_remove_player(request, slug, player_id):
+    league = get_object_or_404(League, slug=slug)
+    membership = get_object_or_404(
+        LeagueMembership, league=league, player_id=player_id
+    )
+    name = membership.player.name
+    membership.delete()
+    messages.success(request, f"«{name}» quitado del plantel.")
+    return redirect("games:league_edit", slug=slug)
 
 
 @require_http_methods(["GET", "POST"])
@@ -504,8 +512,15 @@ def league_edit(request, slug):
             return redirect("games:league_detail", slug=league.slug)
     else:
         form = LeagueForm(instance=league)
+    roster = league.players.order_by("name")
     return render(
         request,
         "games/league_form.html",
-        {"form": form, "is_edit": True, "league": league},
+        {
+            "form": form,
+            "is_edit": True,
+            "league": league,
+            "roster": roster,
+            "add_player_form": LeagueAddPlayerForm(),
+        },
     )
