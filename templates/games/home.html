@@ -1,9 +1,11 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Inicio — Dune Tracker{% endblock %}
 
 {% block content %}
 <section class="hero">
+  <img src="{% static 'img/logo.png' %}" alt="Dune Tracker" class="hero-logo" width="160" height="200">
   <p class="eyebrow">Arrakis te espera</p>
   <h1>Registra tus partidas de Imperium</h1>
   <p class="lead">

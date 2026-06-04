@@ -89,11 +89,22 @@ video {
   min-height: var(--tap-min);
   display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
 }
 
-.logo-mark {
-  color: var(--spice);
-  margin-right: 0.35rem;
+.logo:hover {
+  text-decoration: none;
+}
+
+.logo-img {
+  height: 2.5rem;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  line-height: 1.2;
 }
 
 /* Mobile nav toggle (checkbox hack) */
@@ -180,6 +191,15 @@ main.container {
 .hero {
   text-align: center;
   padding: 1.5rem 0 2.5rem;
+}
+
+.hero-logo {
+  display: block;
+  margin: 0 auto 1rem;
+  width: auto;
+  max-width: min(10rem, 42vw);
+  max-height: 12rem;
+  height: auto;
 }
 
 .eyebrow {

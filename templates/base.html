@@ -5,6 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Dune Tracker{% endblock %}</title>
+  <link rel="icon" href="{% static 'img/logo.png' %}" type="image/png">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
@@ -12,8 +13,8 @@
   <header class="site-header">
     <div class="container header-inner">
       <a href="{% url 'games:home' %}" class="logo">
-        <span class="logo-mark">◆</span>
-        Dune Tracker
+        <img src="{% static 'img/logo.png' %}" alt="Dune Tracker" class="logo-img" width="32" height="40">
+        <span class="logo-text">Dune Tracker</span>
       </a>
       <input type="checkbox" id="nav-toggle" class="nav-toggle-input" aria-hidden="true" tabindex="-1">
       <label for="nav-toggle" class="nav-toggle" aria-label="Abrir menú de navegación">
