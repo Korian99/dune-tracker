@@ -479,11 +479,19 @@ def league_add_player(request, slug):
 
 @require_http_methods(["POST"])
 def league_remove_player(request, slug, player_id):
+    from django.core.exceptions import ValidationError
+    from .delete_guards import ensure_league_roster_can_remove
+
     league = get_object_or_404(League, slug=slug)
     membership = get_object_or_404(
         LeagueMembership, league=league, player_id=player_id
     )
     name = membership.player.name
+    try:
+        ensure_league_roster_can_remove(league, membership.player)
+    except ValidationError as exc:
+        messages.error(request, exc.messages[0])
+        return redirect("games:league_edit", slug=slug)
     membership.delete()
     messages.success(request, f"«{name}» quitado del plantel.")
     return redirect("games:league_edit", slug=slug)

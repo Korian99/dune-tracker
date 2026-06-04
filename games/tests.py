@@ -601,3 +601,26 @@ class LeagueRosterEditTests(TestCase):
             reverse("games:league_edit", kwargs={"slug": league.slug}),
         )
         self.assertFalse(league.players.filter(pk=player.pk).exists())
+
+    def test_roster_remove_blocked_when_player_has_league_games(self):
+        league = League.objects.create(name="Guard Liga", slug="guard-liga")
+        player = resolve_player("Ana", league=league)
+        game = Game.objects.create(
+            league=league,
+            played_on=date.today(),
+            player_count=2,
+        )
+        GameResult.objects.create(
+            game=game,
+            player=player,
+            victory_points=10,
+        )
+        client = Client()
+        response = client.post(
+            reverse(
+                "games:league_remove_player",
+                kwargs={"slug": league.slug, "player_id": player.pk},
+            ),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(league.players.filter(pk=player.pk).exists())

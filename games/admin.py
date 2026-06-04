@@ -1,7 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
-
+from .admin_mixins import GuardedDeleteMixin
+from .delete_guards import (
+    LeagueMembershipInlineFormSet,
+    ensure_league_can_delete,
+    ensure_player_can_delete,
+)
 from .models import Game, GameResult, League, LeagueHito, LeagueMembership, Player
 
 
@@ -58,6 +63,7 @@ class LeagueMembershipInline(admin.TabularInline):
     model = LeagueMembership
     extra = 1
     autocomplete_fields = ["player"]
+    formset = LeagueMembershipInlineFormSet
 
 
 class LeagueHitoInline(admin.TabularInline):
@@ -78,10 +84,13 @@ class LeagueHitoInline(admin.TabularInline):
 
 
 @admin.register(Player)
-class PlayerAdmin(admin.ModelAdmin):
+class PlayerAdmin(GuardedDeleteMixin, admin.ModelAdmin):
     list_display = ("name", "slug", "created_at")
     search_fields = ("name",)
     prepopulated_fields = {"slug": ("name",)}
+
+    def check_delete(self, obj):
+        ensure_player_can_delete(obj)
 
 
 @admin.register(LeagueHito)
@@ -92,11 +101,14 @@ class LeagueHitoAdmin(admin.ModelAdmin):
 
 
 @admin.register(League)
-class LeagueAdmin(admin.ModelAdmin):
+class LeagueAdmin(GuardedDeleteMixin, admin.ModelAdmin):
     list_display = ("name", "slug", "created_at")
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ("created_at",)
     inlines = [LeagueMembershipInline, LeagueHitoInline]
+
+    def check_delete(self, obj):
+        ensure_league_can_delete(obj)
 
 
 @admin.register(Game)

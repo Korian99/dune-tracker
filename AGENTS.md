@@ -173,6 +173,8 @@ python manage.py runserver
 
 Migration `0011` reads `ADMIN_USER` / `ADMIN_PASS` from the environment after loading `.env` when present; skips if unset. Creates superuser with empty email; idempotent password/flag updates if the user already exists.
 
+**Delete guards** (`games/delete_guards.py`): leagues with games, players with any game results, and roster removals when the player has results in that league cannot be deleted in Django admin or via **Editar liga** plantel remove (Spanish error messages).
+
 ### Sheet import/export (Liga N°1 historical data)
 
 Migration `0005` imports 11 May 2026 games into league slug `liga-n1` when that league exists at migrate time. Otherwise run:
