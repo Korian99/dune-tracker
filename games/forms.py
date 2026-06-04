@@ -94,7 +94,6 @@ class LeagueForm(forms.ModelForm):
             for key, value in initial.items():
                 self.fields[key].initial = value
             roster = list(self.instance.players.order_by("name").values_list("name", flat=True))
-            player_choices = [("", "— Sin jugador —")] + [(n, n) for n in roster]
             ps = powerscore_hito(self.instance)
             self.fields["powerscore_value"] = forms.CharField(
                 required=False,
@@ -103,11 +102,20 @@ class LeagueForm(forms.ModelForm):
                 help_text="Récord manual de la liga (texto libre).",
                 initial=ps.manual_value if ps else "",
             )
-            self.fields["powerscore_player"] = forms.ChoiceField(
+            initial_players: list[str] = []
+            if ps:
+                initial_players = list(
+                    ps.manual_players.order_by("name").values_list("name", flat=True)
+                )
+                if not initial_players and ps.manual_player_id:
+                    initial_players = [ps.manual_player.name]
+            self.fields["powerscore_players"] = forms.MultipleChoiceField(
                 required=False,
-                label="Jugador (opcional)",
-                choices=player_choices,
-                initial=ps.manual_player.name if ps and ps.manual_player_id else "",
+                label="Jugadores (empate)",
+                choices=[(n, n) for n in roster],
+                widget=forms.CheckboxSelectMultiple,
+                help_text="Marca todos los que comparten el récord.",
+                initial=initial_players,
             )
 
     def save(self, commit=True):
@@ -125,11 +133,12 @@ class LeagueForm(forms.ModelForm):
                 ps = powerscore_hito(league)
                 if ps:
                     ps.manual_value = self.cleaned_data.get("powerscore_value", "")
-                    player_name = self.cleaned_data.get("powerscore_player", "")
-                    if player_name:
-                        ps.manual_player = resolve_player(player_name, league=league)
-                    else:
-                        ps.manual_player = None
+                    player_names = self.cleaned_data.get("powerscore_players", [])
+                    players = [
+                        resolve_player(name, league=league) for name in player_names
+                    ]
+                    ps.manual_players.set(players)
+                    ps.manual_player = players[0] if players else None
                     ps.save(update_fields=["manual_value", "manual_player"])
         return league
 
@@ -252,7 +261,7 @@ class GameAllianceForm(forms.Form):
     )
     alliance_guild = forms.ChoiceField(
         required=False,
-        label="Gremio",
+        label="Spacing Guild",
         choices=[],
         widget=forms.Select(attrs=_enhanced_select_attrs("Nadie")),
     )

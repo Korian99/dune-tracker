@@ -32,11 +32,13 @@ class LeagueHitoInline(admin.TabularInline):
         "name",
         "metric",
         "manual_value",
+        "manual_players",
         "manual_player",
         "order",
         "is_active",
     )
-    autocomplete_fields = ["manual_player"]
+    autocomplete_fields = ["manual_player", "manual_players"]
+    filter_horizontal = ["manual_players"]
 
 
 @admin.register(Player)

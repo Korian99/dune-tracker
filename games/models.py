@@ -149,6 +149,13 @@ class LeagueHito(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="powerscore_hitos",
+        help_text="Legacy single holder; synced from manual_players when saving via UI.",
+    )
+    manual_players = models.ManyToManyField(
+        Player,
+        blank=True,
+        related_name="powerscore_hitos_multi",
+        help_text="Powerscore holders (supports ties).",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -314,7 +321,7 @@ class GameResult(models.Model):
 
     ALLIANCE_FIELDS = (
         ("alliance_emperor", "Emperador"),
-        ("alliance_guild", "Gremio"),
+        ("alliance_guild", "Spacing Guild"),
         ("alliance_bene_gesserit", "Bene Gesserit"),
         ("alliance_fremen", "Fremen"),
     )

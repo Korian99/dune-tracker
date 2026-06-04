@@ -4,6 +4,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .forms import GameAllianceForm
+from .hitos import ensure_default_hitos
 from .models import Game, GameResult, League, Player, resolve_player
 from .views import _apply_alliances
 from .scoring import (
@@ -507,6 +508,54 @@ class LeagueGamesSortTests(TestCase):
 
 @override_settings(STORAGES=STORAGES_OVERRIDE)
 class LeagueRosterEditTests(TestCase):
+    def _league_edit_post_data(self, league, **overrides):
+        data = {
+            "name": league.name,
+            "description": "",
+            "scoring_notes": "",
+            "count_games": 8,
+            "points_1st": 5,
+            "points_2nd": 3,
+            "points_3rd": 2,
+            "points_4th": 1,
+            "early_win_max_round": 6,
+            "vp_bonus_10": "on",
+            "vp_bonus_12": "on",
+            "vp_bonus_15": "on",
+            "powerscore_value": "",
+        }
+        data.update(overrides)
+        return data
+
+    def test_league_edit_save_via_guardar_liga(self):
+        league = League.objects.create(name="Save Liga", slug="save-liga")
+        ensure_default_hitos(league)
+        client = Client()
+        url = reverse("games:league_edit", kwargs={"slug": league.slug})
+        response = client.post(
+            url,
+            self._league_edit_post_data(league, name="Save Liga Updated"),
+        )
+        self.assertRedirects(
+            response,
+            reverse("games:league_detail", kwargs={"slug": league.slug}),
+        )
+        league.refresh_from_db()
+        self.assertEqual(league.name, "Save Liga Updated")
+
+    def test_league_edit_roster_forms_outside_main_form(self):
+        league = League.objects.create(name="Nested Liga", slug="nested-liga")
+        ensure_default_hitos(league)
+        resolve_player("Ana", league=league)
+        response = Client().get(
+            reverse("games:league_edit", kwargs={"slug": league.slug})
+        )
+        html = response.content.decode()
+        main_end = html.index("</form>")
+        self.assertIn("Guardar liga", html[:main_end])
+        self.assertIn("Plantel", html[main_end:])
+        self.assertNotIn("<form", html[:main_end].replace('<form method="post" class="game-form">', "", 1))
+
     def test_roster_on_edit_not_on_detail(self):
         league = League.objects.create(name="Roster Liga", slug="roster-liga")
         player = resolve_player("Ana", league=league)

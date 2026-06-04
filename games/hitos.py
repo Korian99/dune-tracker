@@ -118,11 +118,22 @@ def _auto_vp_snapshot(league: League, hito: LeagueHito, pick_max: bool) -> HitoS
     }
 
 
-def _manual_snapshot(hito: LeagueHito) -> HitoSnapshot:
-    has_content = bool(hito.manual_value.strip()) or hito.manual_player_id
-    holders: list[HitoHolderRow] = []
+def _manual_holder_names(hito: LeagueHito) -> list[str]:
+    """Player names for manual hito holders (M2M preferred, legacy FK fallback)."""
+    names = list(hito.manual_players.order_by("name").values_list("name", flat=True))
+    if names:
+        return names
     if hito.manual_player_id:
-        holders.append({"player_name": hito.manual_player.name})
+        return [hito.manual_player.name]
+    return []
+
+
+def _manual_snapshot(hito: LeagueHito) -> HitoSnapshot:
+    holder_names = _manual_holder_names(hito)
+    has_content = bool(hito.manual_value.strip()) or bool(holder_names)
+    holders: list[HitoHolderRow] = [
+        {"player_name": name} for name in holder_names
+    ]
 
     label = hito.manual_value.strip() or "—"
     return {
@@ -145,6 +156,10 @@ def snapshot_for_hito(league: League, hito: LeagueHito) -> HitoSnapshot:
 
 def league_hito_snapshots(league: League) -> list[HitoSnapshot]:
     ensure_default_hitos(league)
-    hitos = league.hitos.filter(is_active=True).select_related("manual_player")
+    hitos = (
+        league.hitos.filter(is_active=True)
+        .select_related("manual_player")
+        .prefetch_related("manual_players")
+    )
     hitos = hitos.order_by("order", "slug")
     return [snapshot_for_hito(league, hito) for hito in hitos]

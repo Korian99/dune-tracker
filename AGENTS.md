@@ -14,7 +14,7 @@ Do not mix languages on the same surface. When adding features:
 - New buttons, headings, empty states, confirms → Spanish
 - New models/services documentation → English here and in docstrings
 
-Product names stay as published: *Dune: Imperium*, *Uprising*, *Bloodlines*, faction names (*Emperador*, *Gremio*, etc.).
+Product names stay as published: *Dune: Imperium*, *Uprising*, *Bloodlines*, faction names (*Emperador*, *Spacing Guild*, etc.).
 
 `LANGUAGE_CODE` is `es` in `config/settings.py`. Prefer explicit Spanish copy in templates over gettext unless the project moves to full i18n files.
 
@@ -65,7 +65,7 @@ README.md         # developer setup (English)
 - Per-league tracks (`games/hitos.py`), three built-ins on league create:
   - **Highscore** — auto max VP in one game.
   - **Lowscore** — auto min VP in one game.
-  - **Powerscore** — manual (`manual_value`, optional `manual_player`); edit on **Editar liga**.
+  - **Powerscore** — manual (`manual_value`, `manual_players` M2M for ties; `manual_player` legacy sync); edit on **Editar liga**.
 - `metric`: `auto_max_vp` | `auto_min_vp` | `manual`.
 
 ### `Game`

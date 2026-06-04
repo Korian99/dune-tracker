@@ -87,7 +87,7 @@ class LeagueHitoTests(TestCase):
                 "vp_bonus_12": True,
                 "vp_bonus_15": True,
                 "powerscore_value": "Dominó la mesa",
-                "powerscore_player": "Ana",
+                "powerscore_players": ["Ana"],
             },
             instance=self.league,
         )
@@ -96,11 +96,51 @@ class LeagueHitoTests(TestCase):
         ps = powerscore_hito(self.league)
         self.assertEqual(ps.manual_value, "Dominó la mesa")
         self.assertEqual(ps.manual_player.name, "Ana")
+        self.assertEqual(
+            list(ps.manual_players.values_list("name", flat=True)), ["Ana"]
+        )
         snap = next(
             s for s in league_hito_snapshots(self.league) if s["hito"].slug == "powerscore"
         )
         self.assertFalse(snap["empty"])
         self.assertEqual(snap["value_label"], "Dominó la mesa")
+        self.assertEqual(snap["holders"][0]["player_name"], "Ana")
+
+    def test_powerscore_tie_multiple_players(self):
+        ensure_default_hitos(self.league)
+        resolve_player("Ana", league=self.league)
+        resolve_player("Bob", league=self.league)
+        form = LeagueForm(
+            data={
+                "name": self.league.name,
+                "description": "",
+                "scoring_notes": "",
+                "count_games": 8,
+                "points_1st": 5,
+                "points_2nd": 3,
+                "points_3rd": 2,
+                "points_4th": 1,
+                "early_win_max_round": 6,
+                "vp_bonus_10": True,
+                "vp_bonus_12": True,
+                "vp_bonus_15": True,
+                "powerscore_value": "Empate histórico",
+                "powerscore_players": ["Ana", "Bob"],
+            },
+            instance=self.league,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        ps = powerscore_hito(self.league)
+        self.assertEqual(
+            set(ps.manual_players.values_list("name", flat=True)), {"Ana", "Bob"}
+        )
+        self.assertEqual(ps.manual_player.name, "Ana")
+        snap = next(
+            s for s in league_hito_snapshots(self.league) if s["hito"].slug == "powerscore"
+        )
+        holder_names = {h["player_name"] for h in snap["holders"]}
+        self.assertEqual(holder_names, {"Ana", "Bob"})
 
     def test_custom_hito_name(self):
         ensure_default_hitos(self.league)
