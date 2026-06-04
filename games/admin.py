@@ -1,6 +1,42 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
 
 from .models import Game, GameResult, League, LeagueHito, LeagueMembership, Player
+
+
+class UsernameOnlyUserAdmin(BaseUserAdmin):
+    """Auth users: username + password; email hidden and not required."""
+
+    fieldsets = (
+        (None, {"fields": ("username", "password")}),
+        (
+            "Permissions",
+            {
+                "fields": (
+                    "is_active",
+                    "is_staff",
+                    "is_superuser",
+                    "groups",
+                    "user_permissions",
+                ),
+            },
+        ),
+        ("Important dates", {"fields": ("last_login", "date_joined")}),
+    )
+    add_fieldsets = (
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": ("username", "password1", "password2"),
+            },
+        ),
+    )
+
+
+admin.site.unregister(User)
+admin.site.register(User, UsernameOnlyUserAdmin)
 
 
 class GameResultInline(admin.TabularInline):

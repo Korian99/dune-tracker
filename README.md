@@ -29,11 +29,7 @@ python manage.py runserver
 
 Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
 
-Optional: create an admin user:
-
-```bash
-python manage.py createsuperuser
-```
+Optional: Django admin — set `ADMIN_USER` and `ADMIN_PASS` in `.env` (or Render env vars), then run `migrate`. Migration `0011` creates or updates that superuser. Log in at `/admin/` with **username + password** (`ADMIN_USER`, not email). `createsuperuser` also skips the email prompt.
 
 ## Host on GitHub + go live
 

@@ -66,13 +66,14 @@ The build runs `migrate` automatically — tables are created on Neon on first d
 
 ### Optional: Django admin
 
-Render → your service → **Shell**:
+Set on the Render service **Environment** (same names in local `.env`):
 
-```bash
-python manage.py createsuperuser
-```
+- `ADMIN_USER` — username
+- `ADMIN_PASS` — password
 
-Visit `https://YOUR-APP.onrender.com/admin/`.
+Each deploy that runs `python manage.py migrate` applies migration `0011`, which creates or updates that superuser. Visit `https://YOUR-APP.onrender.com/admin/`.
+
+Manual alternative: Render **Shell** → `python manage.py createsuperuser`.
 
 ---
 

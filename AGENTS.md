@@ -171,6 +171,8 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+Migration `0011` reads `ADMIN_USER` / `ADMIN_PASS` from the environment after loading `.env` when present; skips if unset. Creates superuser with empty email; idempotent password/flag updates if the user already exists.
+
 ### Sheet import/export (Liga N°1 historical data)
 
 Migration `0005` imports 11 May 2026 games into league slug `liga-n1` when that league exists at migrate time. Otherwise run:
