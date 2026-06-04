@@ -1,0 +1,40 @@
+<div class="table-wrap">
+  <table class="data-table data-table--cards results-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Jugador</th>
+        <th>Líder</th>
+        <th>PV</th>
+        {% if league_score_rows %}<th>Pts. liga</th><th>Desglose</th>{% endif %}
+        {% if game.bloodlines %}<th>Sardaukars</th>{% endif %}
+        <th>Alianzas</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for result in game.results.all %}
+      <tr class="{% if result.is_winner %}row-winner{% endif %}">
+        <td data-label="#">{{ result.placement }}</td>
+        <td data-label="Jugador">
+          {{ result.player.name }}
+          {% if result.is_winner %}<span class="tag">Ganador</span>{% elif game.tied_game and result.in_vp_tie %}<span class="tag tag-sm">Empate</span>{% endif %}
+        </td>
+        <td data-label="Líder">{{ result.leader|default:"—" }}</td>
+        <td data-label="PV"><strong>{{ result.victory_points }}</strong></td>
+        {% if league_score_rows %}
+          {% for row in league_score_rows %}
+            {% if row.result.pk == result.pk %}
+        <td data-label="Pts. liga"><strong>{{ row.total|floatformat:"-1" }}</strong></td>
+        <td data-label="Desglose" class="meta formula">{{ row.formula }}</td>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        {% if game.bloodlines %}
+        <td data-label="Sardaukars">{{ result.sardaukar_label }}</td>
+        {% endif %}
+        <td data-label="Alianzas">{% include "games/_result_alliances.html" %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

@@ -27,9 +27,7 @@ from .tiebreak import (
 )
 from .scoring import (
     DEFAULT_SCORING_NOTES,
-    breakdown_display,
-    compute_league_points_breakdown,
-    game_score_summary,
+    league_score_rows_for_game,
     league_standings,
     resolve_scoring_config,
 )
@@ -180,17 +178,7 @@ def game_detail(request, pk):
     alliance_map = _alliance_map_for_game(game)
     league_score_rows = None
     if game.league_id:
-        league_score_rows = []
-        for result in game.results.all():
-            breakdown = compute_league_points_breakdown(result, game.league)
-            league_score_rows.append(
-                {
-                    "result": result,
-                    "breakdown": breakdown,
-                    "formula": breakdown_display(breakdown),
-                    "total": breakdown["total"],
-                }
-            )
+        league_score_rows = league_score_rows_for_game(game, game.league)
     return render(
         request,
         "games/game_detail.html",
@@ -447,7 +435,7 @@ def league_detail(request, slug):
         {
             "game": game,
             "fecha_number": fecha_by_pk[game.pk],
-            "player_scores": game_score_summary(game, league),
+            "league_score_rows": league_score_rows_for_game(game, league),
         }
         for game in games
     ]

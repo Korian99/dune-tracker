@@ -53,13 +53,19 @@ class LeagueScoringTests(TestCase):
         self.assertEqual(compute_league_points(results["D"], self.league), 1.0)
 
     def test_game_score_summary_lists_all_players(self):
-        self._result("A", 12)
+        self._result("A", 12, leader="Paul")
         self._result("B", 8)
         rows = game_score_summary(self.game, self.league)
         self.assertEqual(len(rows), 2)
         self.assertEqual(rows[0]["player_name"], "A")
         self.assertEqual(rows[0]["placement"], 1)
         self.assertEqual(rows[0]["victory_points"], 12)
+        self.assertEqual(rows[0]["leader"], "Paul")
+        self.assertEqual(
+            rows[0]["result"].pk,
+            self.game.results.get(player__name="A").pk,
+        )
+        self.assertEqual(rows[0]["total"], rows[0]["league_points"])
         self.assertGreater(rows[0]["league_points"], 0)
         self.assertIn("=", rows[0]["formula"])
 
@@ -500,10 +506,12 @@ class LeagueGamesSortTests(TestCase):
             reverse("games:league_detail", kwargs={"slug": league.slug})
         )
         self.assertContains(response, "Fecha N°1")
+        self.assertContains(response, "results-table")
         self.assertContains(response, "2 Sardaukars")
-        self.assertContains(response, "Alianzas:")
         self.assertContains(response, "Emperador")
+        self.assertContains(response, "Pts. liga")
         self.assertNotContains(response, 'class="league-game-card__date"')
+        self.assertNotContains(response, "game-player-scores")
 
 
 @override_settings(STORAGES=STORAGES_OVERRIDE)

@@ -179,21 +179,39 @@ def breakdown_display(breakdown: LeaguePointsBreakdown) -> str:
     return "+".join(parts) + f"={total_str}"
 
 
-def game_score_summary(game, league: League) -> list[dict[str, Any]]:
-    """Per-player league scoring for one game, sorted by placement."""
+def league_score_rows_for_game(game, league: League) -> list[dict[str, Any]]:
+    """League points per result row for game detail / league game cards."""
     rows = []
-    results = list(game.results.select_related("player"))
-    results.sort(key=lambda r: (r.placement, r.pk))
-    for result in results:
+    for result in game.results.select_related("player"):
         breakdown = compute_league_points_breakdown(result, league)
         total = breakdown["total"]
         rows.append(
             {
+                "result": result,
+                "breakdown": breakdown,
+                "formula": breakdown_display(breakdown),
+                "total": total,
+            }
+        )
+    return rows
+
+
+def game_score_summary(game, league: League) -> list[dict[str, Any]]:
+    """Per-player league scoring for one game, sorted by placement."""
+    rows = []
+    for row in league_score_rows_for_game(game, league):
+        result = row["result"]
+        total = row["total"]
+        rows.append(
+            {
+                "result": result,
                 "player_name": result.player.name,
+                "leader": result.leader,
                 "placement": result.placement,
                 "victory_points": result.victory_points,
                 "league_points": int(total) if total == int(total) else total,
-                "formula": breakdown_display(breakdown),
+                "total": total,
+                "formula": row["formula"],
                 "is_winner": result.is_winner,
                 "in_vp_tie": result.in_vp_tie,
                 "sardaukar_count": result.sardaukar_count,
@@ -201,6 +219,7 @@ def game_score_summary(game, league: League) -> list[dict[str, Any]]:
                 "alliances_held": result.alliances_held,
             }
         )
+    rows.sort(key=lambda r: (r["placement"], r["result"].pk))
     return rows
 
 

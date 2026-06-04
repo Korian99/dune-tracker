@@ -151,30 +151,8 @@
           · <a href="{% url 'games:edit' pk=game.pk %}">Editar</a>
         </div>
       </div>
-      {% if entry.player_scores %}
-      <ul class="game-player-scores">
-        {% for row in entry.player_scores %}
-        <li class="{% if row.is_winner %}game-player-scores__winner{% endif %}">
-          <span class="game-player-scores__name">
-            {{ row.player_name }}
-            {% if row.is_winner %}<span class="tag tag-sm">Ganador</span>{% elif game.tied_game and row.in_vp_tie %}<span class="tag tag-sm">Empate</span>{% endif %}
-          </span>
-          <span class="game-player-scores__stats">
-            {{ row.victory_points }} PV · {{ row.placement }}.º
-            · <strong>{{ row.league_points }} pts</strong>
-            <span class="meta formula">({{ row.formula }})</span>
-            {% if row.sardaukar_count %}
-            · <span class="meta">{{ row.sardaukar_label }}</span>
-            {% endif %}
-            {% if row.alliances_held %}
-            · <span class="meta">Alianzas:
-              {% for label in row.alliances_held %}{{ label }}{% if not forloop.last %}, {% endif %}{% endfor %}
-            </span>
-            {% endif %}
-          </span>
-        </li>
-        {% endfor %}
-      </ul>
+      {% if entry.league_score_rows %}
+      {% include "games/_game_results_table.html" with league_score_rows=entry.league_score_rows %}
       {% else %}
       <p class="help">Sin resultados registrados.</p>
       {% endif %}
