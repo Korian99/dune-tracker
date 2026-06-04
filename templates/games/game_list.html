@@ -35,7 +35,9 @@
       {% for game in games %}
       <tr>
         <td data-label="Fecha">{{ game.played_on }}</td>
-        <td data-label="Liga">{% if game.league %}{{ game.league.name }}{% else %}—{% endif %}</td>
+        <td data-label="Liga">
+          {% if game.league %}{{ game.league.name }}{% else %}<span class="tag tag-sm tag-casual">Casual</span>{% endif %}
+        </td>
         <td data-label="Edición">
           {{ game.get_base_game_display }}
           {% if game.bloodlines %}<span class="tag tag-sm">Bloodlines</span>{% endif %}

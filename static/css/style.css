@@ -496,6 +496,14 @@ h2 {
   margin-bottom: 0.5rem;
 }
 
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .card-title {
   margin: 0;
   font-weight: 600;
@@ -530,6 +538,11 @@ h2 {
 .tag-sm {
   font-size: 0.65rem;
   margin-left: 0.35rem;
+}
+
+.tag-casual {
+  background: rgba(120, 140, 165, 0.25);
+  color: #b8c4d4;
 }
 
 /* Tables: scroll wrapper + optional card layout */

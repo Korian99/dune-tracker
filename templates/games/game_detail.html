@@ -7,7 +7,11 @@
   <div>
     <p class="eyebrow">
       {{ game.get_base_game_display }}
-      {% if game.league %} · <a href="{% url 'games:league_detail' slug=game.league.slug %}">{{ game.league.name }}</a>{% endif %}
+      {% if game.league %}
+        · <a href="{% url 'games:league_detail' slug=game.league.slug %}">{{ game.league.name }}</a>
+      {% else %}
+        · <span class="tag tag-casual tag-sm">Casual</span>
+      {% endif %}
     </p>
     <h1>{{ game.played_on }}</h1>
     <p class="meta">

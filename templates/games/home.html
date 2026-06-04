@@ -50,8 +50,9 @@
       <a href="{% url 'games:detail' pk=game.pk %}" class="card-link">
         <div class="card-top">
           <time>{{ game.played_on }}</time>
-          {% if game.league %}<span class="tag">{{ game.league.name }}</span>{% endif %}
-          {% if game.bloodlines %}<span class="tag">Bloodlines</span>{% endif %}
+          <div class="card-tags">
+            {% include "games/_game_tags.html" %}
+          </div>
         </div>
         <p class="card-title">
           {{ game.get_player_count_display }}

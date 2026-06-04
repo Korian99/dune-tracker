@@ -1,0 +1,8 @@
+{% if game.league %}
+<span class="tag">{{ game.league.name }}</span>
+{% else %}
+<span class="tag tag-casual">Casual</span>
+{% endif %}
+{% if game.bloodlines %}
+<span class="tag">Bloodlines</span>
+{% endif %}
