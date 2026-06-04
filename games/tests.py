@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from .forms import GameAllianceForm
+from .forms import GameAllianceForm, LeagueForm
 from .hitos import ensure_default_hitos
 from .models import Game, GameResult, League, Player, resolve_player
 from .views import _apply_alliances
@@ -176,14 +176,58 @@ class LeagueScoringTests(TestCase):
                 "points_3rd": 1,
                 "points_4th": 0,
                 "early_win_max_round": 5,
-                "vp_bonus_10": True,
-                "vp_bonus_12": False,
-                "vp_bonus_15": True,
+                "_vp_thresholds_parsed": [10, 15],
             }
         )
         self.assertEqual(cfg["count_games"], 5)
         self.assertEqual(cfg["placement_points"][1], 4)
         self.assertEqual(cfg["vp_thresholds"], [10, 15])
+
+    def test_parse_vp_thresholds_input(self):
+        from .scoring import parse_vp_thresholds_input
+
+        self.assertEqual(parse_vp_thresholds_input("10, 12, 15"), [10, 12, 15])
+        self.assertEqual(parse_vp_thresholds_input("15 10"), [10, 15])
+        self.assertEqual(parse_vp_thresholds_input(""), [])
+
+    def test_league_form_rejects_invalid_vp_thresholds(self):
+        form = LeagueForm(
+            data={
+                "name": "Bad",
+                "description": "",
+                "scoring_notes": "",
+                "count_games": 8,
+                "points_1st": 5,
+                "points_2nd": 3,
+                "points_3rd": 2,
+                "points_4th": 1,
+                "early_win_max_round": 6,
+                "vp_thresholds": "10, foo, 15",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("ERROR", form.errors["vp_thresholds"][0])
+
+    def test_league_form_custom_vp_thresholds(self):
+        form = LeagueForm(
+            data={
+                "name": "Umbrales",
+                "description": "",
+                "scoring_notes": "",
+                "count_games": 8,
+                "points_1st": 5,
+                "points_2nd": 3,
+                "points_3rd": 2,
+                "points_4th": 1,
+                "early_win_max_round": 6,
+                "vp_thresholds": "8, 11, 14",
+            }
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        league = form.save()
+        self.assertEqual(
+            resolve_scoring_config(league)["vp_thresholds"], [8, 11, 14]
+        )
 
     def test_resolve_merges_empty_league_config(self):
         empty = League.objects.create(name="Empty", slug="empty")
@@ -527,9 +571,7 @@ class LeagueRosterEditTests(TestCase):
             "points_3rd": 2,
             "points_4th": 1,
             "early_win_max_round": 6,
-            "vp_bonus_10": "on",
-            "vp_bonus_12": "on",
-            "vp_bonus_15": "on",
+            "vp_thresholds": "10, 12, 15",
             "powerscore_value": "",
         }
         data.update(overrides)

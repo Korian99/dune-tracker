@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{% if is_edit %}Editar{% else %}Nueva{% endif %} liga — Dune Tracker{% endblock %}
 
@@ -67,13 +68,12 @@
       <span class="help">{{ form.early_win_max_round.help_text }}</span>
       {{ form.early_win_max_round.errors }}
     </div>
-    <div class="field field-alliances">
-      <span class="field-label">Bonos por PV finales</span>
-      <div class="alliance-checks">
-        <label>{{ form.vp_bonus_10 }} 10+ PV</label>
-        <label>{{ form.vp_bonus_12 }} 12+ PV</label>
-        <label>{{ form.vp_bonus_15 }} 15+ PV</label>
-      </div>
+    <div class="field vp-thresholds-field" data-vp-thresholds-field>
+      {{ form.vp_thresholds.label_tag }}
+      {{ form.vp_thresholds }}
+      <p class="vp-thresholds-feedback" id="vp-thresholds-feedback" role="status" aria-live="polite"></p>
+      <span class="help">{{ form.vp_thresholds.help_text }}</span>
+      {{ form.vp_thresholds.errors }}
     </div>
   </fieldset>
 
@@ -141,4 +141,8 @@
   </form>
 </fieldset>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/vp-thresholds.js' %}"></script>
 {% endblock %}

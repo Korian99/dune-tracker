@@ -13,6 +13,7 @@ Default standard system:
 Alternate: {"system": "victory_points"} — league points = VP per game (still best-N).
 """
 
+import re
 from collections import defaultdict
 from typing import Any, TypedDict
 
@@ -31,6 +32,29 @@ def default_scoring_config() -> dict[str, Any]:
     }
 
 
+def parse_vp_thresholds_input(raw: str) -> list[int]:
+    """Parse comma/space-separated VP thresholds (1–20); sorted unique ascending."""
+    text = (raw or "").strip()
+    if not text:
+        return []
+    values: list[int] = []
+    for part in re.split(r"[,;\s]+", text):
+        if not part:
+            continue
+        try:
+            value = int(part)
+        except ValueError as exc:
+            raise ValueError(f"«{part}» no es un número válido.") from exc
+        if value < 1 or value > 20:
+            raise ValueError("Cada umbral debe estar entre 1 y 20 PV.")
+        values.append(value)
+    return sorted(set(values))
+
+
+def format_vp_thresholds_display(thresholds: list[int]) -> str:
+    return ", ".join(str(t) for t in thresholds)
+
+
 def resolve_scoring_config(league: League) -> dict[str, Any]:
     """Merge league.scoring_config onto defaults; normalize types from JSON."""
     merged = {**default_scoring_config(), **(league.scoring_config or {})}
@@ -45,13 +69,9 @@ def resolve_scoring_config(league: League) -> dict[str, Any]:
 
 def config_from_form_data(cleaned: dict) -> dict[str, Any]:
     """Build scoring_config JSON from LeagueForm cleaned_data."""
-    thresholds = []
-    if cleaned.get("vp_bonus_10"):
-        thresholds.append(10)
-    if cleaned.get("vp_bonus_12"):
-        thresholds.append(12)
-    if cleaned.get("vp_bonus_15"):
-        thresholds.append(15)
+    thresholds = cleaned.get("_vp_thresholds_parsed")
+    if thresholds is None:
+        thresholds = parse_vp_thresholds_input(cleaned.get("vp_thresholds", ""))
     return {
         "system": "standard",
         "count_games": cleaned["count_games"],
@@ -69,7 +89,7 @@ def config_from_form_data(cleaned: dict) -> dict[str, Any]:
 def config_to_form_initial(config: dict[str, Any]) -> dict[str, Any]:
     cfg = {**default_scoring_config(), **config}
     pp = cfg["placement_points"]
-    thresholds = set(cfg.get("vp_thresholds", []))
+    thresholds = [int(x) for x in cfg.get("vp_thresholds", [])]
     return {
         "count_games": cfg["count_games"],
         "points_1st": pp.get(1, 5),
@@ -77,9 +97,7 @@ def config_to_form_initial(config: dict[str, Any]) -> dict[str, Any]:
         "points_3rd": pp.get(3, 2),
         "points_4th": pp.get(4, 1),
         "early_win_max_round": cfg["early_win_max_round"],
-        "vp_bonus_10": 10 in thresholds,
-        "vp_bonus_12": 12 in thresholds,
-        "vp_bonus_15": 15 in thresholds,
+        "vp_thresholds": format_vp_thresholds_display(thresholds),
     }
 
 

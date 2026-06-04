@@ -1031,6 +1031,28 @@ h2 {
   color: var(--muted);
 }
 
+.vp-thresholds-feedback {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.vp-thresholds-feedback--ok {
+  color: var(--spice-bright);
+}
+
+.vp-thresholds-feedback--error {
+  color: var(--danger);
+}
+
+.vp-thresholds-input--error {
+  border-color: var(--danger);
+}
+
+.vp-thresholds-input--ok {
+  border-color: var(--spice);
+}
+
 .empty,
 .empty-state {
   text-align: center;

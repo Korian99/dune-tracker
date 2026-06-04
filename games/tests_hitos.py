@@ -33,9 +33,7 @@ class LeagueHitoTests(TestCase):
                 "points_3rd": 2,
                 "points_4th": 1,
                 "early_win_max_round": 6,
-                "vp_bonus_10": True,
-                "vp_bonus_12": True,
-                "vp_bonus_15": True,
+                "vp_thresholds": "10, 12, 15",
             }
         )
         self.assertTrue(form.is_valid())
@@ -83,9 +81,7 @@ class LeagueHitoTests(TestCase):
                 "points_3rd": 2,
                 "points_4th": 1,
                 "early_win_max_round": 6,
-                "vp_bonus_10": True,
-                "vp_bonus_12": True,
-                "vp_bonus_15": True,
+                "vp_thresholds": "10, 12, 15",
                 "powerscore_value": "Dominó la mesa",
                 "powerscore_players": ["Ana"],
             },
@@ -121,9 +117,7 @@ class LeagueHitoTests(TestCase):
                 "points_3rd": 2,
                 "points_4th": 1,
                 "early_win_max_round": 6,
-                "vp_bonus_10": True,
-                "vp_bonus_12": True,
-                "vp_bonus_15": True,
+                "vp_thresholds": "10, 12, 15",
                 "powerscore_value": "Empate histórico",
                 "powerscore_players": ["Ana", "Bob"],
             },

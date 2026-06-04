@@ -3,7 +3,12 @@ from django.forms import inlineformset_factory
 
 from .leaders import LEADER_CHOICES
 from .models import Game, GameResult, League, Player, resolve_player
-from .scoring import config_from_form_data, config_to_form_initial
+from .scoring import (
+    config_from_form_data,
+    config_to_form_initial,
+    format_vp_thresholds_display,
+    parse_vp_thresholds_input,
+)
 
 ENHANCED_SELECT_CLASS = "enhanced-select"
 
@@ -51,20 +56,22 @@ class LeagueForm(forms.ModelForm):
         label="Victoria temprana hasta ronda",
         help_text="+1 si ganas con rondas 1..N (0 = desactivado). Ej. 6 = antes de ronda 7.",
     )
-    vp_bonus_10 = forms.BooleanField(
+    vp_thresholds = forms.CharField(
         required=False,
-        initial=True,
-        label="+1 si alcanzas 10 PV",
-    )
-    vp_bonus_12 = forms.BooleanField(
-        required=False,
-        initial=True,
-        label="+1 si alcanzas 12 PV",
-    )
-    vp_bonus_15 = forms.BooleanField(
-        required=False,
-        initial=True,
-        label="+1 si alcanzas 15 PV",
+        initial="10, 12, 15",
+        label="Umbrales de PV para bonos",
+        help_text=(
+            "+1 por cada umbral alcanzado (acumulable). Separa con comas, "
+            "ej. 10, 12, 15. Vacío = sin bonos por PV."
+        ),
+        widget=forms.TextInput(
+            attrs={
+                "class": "vp-thresholds-input",
+                "placeholder": "10, 12, 15",
+                "spellcheck": "false",
+                "inputmode": "numeric",
+            }
+        ),
     )
 
     class Meta:
@@ -117,6 +124,15 @@ class LeagueForm(forms.ModelForm):
                 help_text="Marca todos los que comparten el récord.",
                 initial=initial_players,
             )
+
+    def clean_vp_thresholds(self):
+        raw = self.cleaned_data.get("vp_thresholds", "")
+        try:
+            parsed = parse_vp_thresholds_input(raw)
+        except ValueError as exc:
+            raise forms.ValidationError(f"ERROR — {exc}") from exc
+        self.cleaned_data["_vp_thresholds_parsed"] = parsed
+        return format_vp_thresholds_display(parsed)
 
     def save(self, commit=True):
         from .hitos import ensure_default_hitos, powerscore_hito

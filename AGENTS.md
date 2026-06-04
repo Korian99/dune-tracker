@@ -130,7 +130,7 @@ Used when `scoring_config` is empty or `system` is `"standard"`. Canonical defau
 
 **Best-N:** `league_standings()` sorts each player’s games by points descending and sums only `count_games` (discards worst).
 
-Edit per league: **Editar liga** form → “Parámetros de puntuación” (writes `scoring_config` JSON).
+Edit per league: **Editar liga** form → “Parámetros de puntuación” (writes `scoring_config` JSON). VP bonus thresholds are a comma-separated list (not fixed to 10/12/15).
 
 ### `scoring_config` JSON example
 
