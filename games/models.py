@@ -246,7 +246,7 @@ class Game(models.Model):
     placement_tiebreaks = models.JSONField(
         default=dict,
         blank=True,
-        help_text="Per-VP tiebreak: VP string -> winner result pk or 'tie'",
+        help_text="Per-VP tiebreak: VP string -> 'tie', ordered [result pk, ...], or legacy winner pk",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

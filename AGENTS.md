@@ -192,6 +192,23 @@ python manage.py export_sheet_games liga-n1 -o partidas.txt
 
 League page **Exportar partidas** hits the same format as download. Source data: `games/data/liga_n1_sheet.py`; logic: `games/sheet_io.py`.
 
+## Android (Kotlin) companion
+
+Offline mobile rebuild lives in sibling folder `../dune-tracker-android/` (separate git repo recommended). See `docs/MOBILE_KOTLIN.md` and `dune-tracker-android/docs/LEARNING_PATH.md`.
+
+### `CHANGES_PENDING.md` (Android)
+
+When working on the Android app or when web changes affect mobile parity, maintain **`../dune-tracker-android/CHANGES_PENDING.md`**:
+
+- **Create** the file from the template in that repo if it is missing.
+- **Append** open bugs, build errors, and web/Android mismatches under **Open** when they cannot be fixed in the same session.
+- **Check off / move to Done** when resolved.
+- Reference Django paths (e.g. `games/tiebreak.py`, templates) for parity issues.
+
+Agents should read `CHANGES_PENDING.md` at the start of Android-related tasks and update it before finishing if anything remains broken or untested.
+
+Optional: keep a similar `CHANGES_PENDING.md` in this repo for web-only follow-ups.
+
 ## Deployment
 
 - **GitHub** — source of truth: `https://github.com/Korian99/dune-tracker`

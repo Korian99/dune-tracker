@@ -1,11 +1,18 @@
 """
 VP tie detection, resolution, and placement ranks for games.
+
+placement_tiebreaks JSON per VP key (string):
+  - "tie" — all players in the group share the same competition rank
+  - int or numeric string — legacy: one winner, others share next rank
+  - [pk, pk, ...] — full order within the group (1st → last among tied VP)
 """
 
 from collections import defaultdict
-from typing import Any
+from typing import Any, Literal
 
 from .models import Game, GameResult
+
+GroupOrder = list[int] | Literal["tie"]
 
 
 def vp_tie_groups(game: Game) -> list[dict]:
@@ -52,45 +59,116 @@ def _game_max_vp(game: Game) -> int | None:
     return max(r.victory_points for r in results)
 
 
-def _vp_group_resolution(
-    game: Game, vp: int, group: list[GameResult]
-) -> tuple[GameResult | None, str]:
-    """
-    Return (winner, mode) for a tied VP cluster.
-    mode is 'winner', 'tie', or 'unresolved'.
-    """
-    max_vp = _game_max_vp(game)
-    if max_vp is None:
-        return None, "unresolved"
+def _group_result_pks(group: list[GameResult]) -> set[int]:
+    return {r.pk for r in group}
 
-    if vp == max_vp:
-        if game.tied_game:
-            return None, "tie"
-        winner = game.resolved_winner()
-        if winner is not None and winner in group:
-            return winner, "winner"
-        return None, "unresolved"
 
-    tiebreaks = game.placement_tiebreaks or {}
-    raw = tiebreaks.get(str(vp))
+def _parse_stored_order(raw: Any, group_pks: set[int]) -> GroupOrder | None:
+    """Return ordered pks, 'tie', or None (unresolved / legacy winner int)."""
     if raw is None:
-        return None, "unresolved"
+        return None
     if raw == "tie":
-        return None, "tie"
+        return "tie"
+    if isinstance(raw, list):
+        try:
+            pks = [int(x) for x in raw]
+        except (TypeError, ValueError):
+            return None
+        if len(pks) == len(group_pks) and set(pks) == group_pks:
+            return pks
+        return None
     try:
         winner_pk = int(raw)
     except (TypeError, ValueError):
-        return None, "unresolved"
-    winner = next((r for r in group if r.pk == winner_pk), None)
-    if winner is None:
-        return None, "unresolved"
-    return winner, "winner"
+        return None
+    if winner_pk not in group_pks:
+        return None
+    return None  # legacy int handled separately
+
+
+def _group_placement_order(
+    game: Game, vp: int, group: list[GameResult]
+) -> GroupOrder | None:
+    """
+    Return full pk order (best → worst within group), 'tie', or None if unresolved.
+    Legacy winner-only: None (placements_for_game applies winner + shared rank).
+    """
+    group_pks = _group_result_pks(group)
+    max_vp = _game_max_vp(game)
+
+    tiebreaks = game.placement_tiebreaks or {}
+    raw = tiebreaks.get(str(vp))
+
+    if vp == max_vp:
+        if game.tied_game:
+            return "tie"
+        parsed = _parse_stored_order(raw, group_pks)
+        if parsed is not None:
+            return parsed
+        if game.designated_winner_id and game.designated_winner_id in group_pks:
+            return None  # legacy winner-only
+        return None
+
+    parsed = _parse_stored_order(raw, group_pks)
+    if parsed is not None:
+        return parsed
+    return None
+
+
+def _group_is_legacy_winner(game: Game, vp: int, group: list[GameResult]) -> bool:
+    """True when only a single winner is stored (others share next rank)."""
+    group_pks = _group_result_pks(group)
+    max_vp = _game_max_vp(game)
+    tiebreaks = game.placement_tiebreaks or {}
+    raw = tiebreaks.get(str(vp))
+
+    if vp == max_vp:
+        if game.tied_game:
+            return False
+        if isinstance(raw, list):
+            return False
+        if raw == "tie":
+            return False
+        return bool(
+            game.designated_winner_id
+            and game.designated_winner_id in group_pks
+            and not isinstance(raw, list)
+        )
+
+    if isinstance(raw, list) or raw == "tie" or raw is None:
+        return False
+    try:
+        pk = int(raw)
+    except (TypeError, ValueError):
+        return False
+    return pk in group_pks
+
+
+def _legacy_winner_pk(game: Game, vp: int, group: list[GameResult]) -> int | None:
+    group_pks = _group_result_pks(group)
+    max_vp = _game_max_vp(game)
+    if vp == max_vp and game.designated_winner_id in group_pks:
+        return game.designated_winner_id
+    raw = (game.placement_tiebreaks or {}).get(str(vp))
+    if raw is None or raw == "tie" or isinstance(raw, list):
+        return None
+    try:
+        pk = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return pk if pk in group_pks else None
 
 
 def vp_group_is_resolved(game: Game, group: dict) -> bool:
-    """True when this VP tie has a stored winner or declared tie."""
-    _, mode = _vp_group_resolution(game, group["vp"], group["results"])
-    return mode in ("winner", "tie")
+    """True when this VP tie has a stored resolution."""
+    vp = group["vp"]
+    results = group["results"]
+    order = _group_placement_order(game, vp, results)
+    if order is not None:
+        return True
+    if _group_is_legacy_winner(game, vp, results):
+        return True
+    return False
 
 
 def game_needs_tiebreak(game: Game) -> bool:
@@ -118,19 +196,33 @@ def placements_for_game(game: Game) -> dict[int, int]:
             rank += 1
             continue
 
-        winner, mode = _vp_group_resolution(game, vp, group)
-        if mode == "winner" and winner is not None:
-            placements[winner.pk] = rank
-            rank += 1
-            losers = [r for r in group if r.pk != winner.pk]
-            if losers:
-                for result in losers:
-                    placements[result.pk] = rank
-                rank += 1
-        else:
+        order = _group_placement_order(game, vp, group)
+        if order == "tie":
             for result in group:
                 placements[result.pk] = rank
             rank += len(group)
+            continue
+
+        if isinstance(order, list):
+            for pk in order:
+                placements[pk] = rank
+                rank += 1
+            continue
+
+        if _group_is_legacy_winner(game, vp, group):
+            winner_pk = _legacy_winner_pk(game, vp, group)
+            if winner_pk is not None:
+                placements[winner_pk] = rank
+                rank += 1
+                for result in group:
+                    if result.pk != winner_pk:
+                        placements[result.pk] = rank
+                rank += 1
+                continue
+
+        for result in group:
+            placements[result.pk] = rank
+        rank += len(group)
 
     return placements
 
@@ -155,18 +247,30 @@ def normalize_tiebreaks_after_save(game: Game) -> None:
             vp = int(key)
         except (TypeError, ValueError):
             continue
-        if vp not in group_vps or vp == max_vp:
+        if vp not in group_vps:
             continue
         group = next(g for g in groups if g["vp"] == vp)
+        group_pks = _group_result_pks(group["results"])
         if raw == "tie":
             cleaned[key] = "tie"
+            continue
+        if isinstance(raw, list):
+            try:
+                pks = [int(x) for x in raw]
+            except (TypeError, ValueError):
+                continue
+            if set(pks) == group_pks and len(pks) == len(group_pks):
+                cleaned[key] = pks
             continue
         try:
             pk = int(raw)
         except (TypeError, ValueError):
             continue
-        if any(r.pk == pk for r in group["results"]):
+        if pk in group_pks:
+            if vp == max_vp:
+                continue  # max VP uses designated_winner for legacy int
             cleaned[key] = pk
+
     if cleaned != tiebreaks:
         game.placement_tiebreaks = cleaned
         update_fields.append("placement_tiebreaks")
@@ -196,6 +300,7 @@ def apply_tiebreak(
     winner_result_id: str | None = None,
     *,
     vp: int | None = None,
+    order_result_ids: list[int] | None = None,
 ) -> None:
     """Persist tiebreak for one VP group (defaults to top-VP cluster)."""
     groups = vp_tie_groups(game)
@@ -207,23 +312,50 @@ def apply_tiebreak(
     if group is None:
         raise ValueError("No hay empate en ese nivel de PV.")
 
-    result_ids = {r.pk for r in group["results"]}
+    result_ids = _group_result_pks(group["results"])
     tiebreaks = dict(game.placement_tiebreaks or {})
 
     if resolution == "tie":
         if target_vp == max_vp:
             game.tied_game = True
             game.designated_winner = None
-            game.save(update_fields=["tied_game", "designated_winner"])
+            tiebreaks.pop(str(target_vp), None)
+            game.placement_tiebreaks = tiebreaks
+            game.save(
+                update_fields=["tied_game", "designated_winner", "placement_tiebreaks"]
+            )
         else:
             tiebreaks[str(target_vp)] = "tie"
             game.placement_tiebreaks = tiebreaks
             game.save(update_fields=["placement_tiebreaks"])
         return
 
+    if resolution == "rank":
+        if not order_result_ids:
+            raise ValueError("Indica el puesto de cada jugador en el grupo.")
+        if set(order_result_ids) != result_ids:
+            raise ValueError("Cada jugador del empate debe tener un puesto distinto.")
+        if len(order_result_ids) != len(result_ids):
+            raise ValueError("Faltan jugadores en el orden del empate.")
+        tiebreaks[str(target_vp)] = order_result_ids
+        game.placement_tiebreaks = tiebreaks
+        if target_vp == max_vp:
+            game.tied_game = False
+            game.designated_winner_id = order_result_ids[0]
+            game.save(
+                update_fields=[
+                    "placement_tiebreaks",
+                    "tied_game",
+                    "designated_winner",
+                ]
+            )
+        else:
+            game.save(update_fields=["placement_tiebreaks"])
+        return
+
     if resolution != "winner" or not winner_result_id:
         raise ValueError(
-            "Elige un jugador para el puesto o marca «Empate» en ese grupo."
+            "Elige el puesto de cada jugador o marca «Empate (mismo puesto)»."
         )
 
     try:
@@ -237,7 +369,11 @@ def apply_tiebreak(
     if target_vp == max_vp:
         game.tied_game = False
         game.designated_winner_id = winner_pk
-        game.save(update_fields=["tied_game", "designated_winner"])
+        tiebreaks.pop(str(target_vp), None)
+        game.placement_tiebreaks = tiebreaks
+        game.save(
+            update_fields=["tied_game", "designated_winner", "placement_tiebreaks"]
+        )
     else:
         tiebreaks[str(target_vp)] = winner_pk
         game.placement_tiebreaks = tiebreaks
@@ -260,7 +396,30 @@ def apply_tiebreaks_from_post(game: Game, post) -> None:
             errors.append(f"Resuelve el empate de {label}.")
             continue
         try:
-            apply_tiebreak(game, resolution, winner_id, vp=vp)
+            if resolution == "rank":
+                ranks: dict[int, int] = {}
+                for result in group["results"]:
+                    raw_rank = (post.get(f"tiebreak_{vp}_rank_{result.pk}") or "").strip()
+                    if not raw_rank:
+                        raise ValueError(
+                            f"Asigna un puesto a cada jugador en el empate de {vp} PV."
+                        )
+                    try:
+                        ranks[result.pk] = int(raw_rank)
+                    except ValueError as exc:
+                        raise ValueError("Puesto no válido.") from exc
+                expected = set(range(1, len(group["results"]) + 1))
+                if set(ranks.values()) != expected:
+                    raise ValueError(
+                        f"Los puestos en {vp} PV deben ser del 1º al "
+                        f"{len(group['results'])}º sin repetir."
+                    )
+                order = sorted(ranks.keys(), key=lambda pk: ranks[pk])
+                apply_tiebreak(
+                    game, "rank", order_result_ids=order, vp=vp
+                )
+            else:
+                apply_tiebreak(game, resolution, winner_id, vp=vp)
             game.refresh_from_db()
         except ValueError as exc:
             errors.append(str(exc))
@@ -270,21 +429,32 @@ def apply_tiebreaks_from_post(game: Game, post) -> None:
 
 
 def selected_tiebreak_for_group(game: Game, group: dict) -> dict:
-    """UI state: resolution and winner pk for one tie group."""
+    """UI state for one tie group."""
     vp = group["vp"]
-    if group["is_winner_group"]:
-        if game.tied_game:
-            return {"resolution": "tie", "winner_pk": None}
-        if game.designated_winner_id:
-            return {"resolution": "winner", "winner_pk": game.designated_winner_id}
-        return {"resolution": "", "winner_pk": None}
+    results = group["results"]
+    group_pks = _group_result_pks(results)
 
-    raw = (game.placement_tiebreaks or {}).get(str(vp))
-    if raw == "tie":
-        return {"resolution": "tie", "winner_pk": None}
-    if raw is not None:
-        try:
-            return {"resolution": "winner", "winner_pk": int(raw)}
-        except (TypeError, ValueError):
-            pass
-    return {"resolution": "", "winner_pk": None}
+    order = _group_placement_order(game, vp, results)
+    if order == "tie":
+        return {"resolution": "tie", "winner_pk": None, "ranks": {}}
+
+    if isinstance(order, list):
+        ranks = {pk: index + 1 for index, pk in enumerate(order)}
+        return {"resolution": "rank", "winner_pk": order[0], "ranks": ranks}
+
+    if _group_is_legacy_winner(game, vp, results):
+        winner_pk = _legacy_winner_pk(game, vp, results)
+        ranks = {}
+        if winner_pk is not None:
+            ranks[winner_pk] = 1
+            next_rank = 2
+            for result in results:
+                if result.pk != winner_pk:
+                    ranks[result.pk] = next_rank
+        return {
+            "resolution": "rank" if len(results) > 2 else "winner",
+            "winner_pk": winner_pk,
+            "ranks": ranks,
+        }
+
+    return {"resolution": "", "winner_pk": None, "ranks": {}}

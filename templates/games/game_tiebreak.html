@@ -9,7 +9,7 @@
     <h1>Resolver empates</h1>
     <p class="lead">
       {% if needs_resolution %}
-        Hay jugadores empatados en uno o más niveles de PV. Indica quién ocupa el mejor puesto en cada grupo.
+        Hay jugadores empatados en uno o más niveles de PV. Asigna el puesto de cada jugador en cada grupo.
       {% else %}
         Esta partida ya tiene desempates guardados. Puedes confirmarlos o cambiarlos.
       {% endif %}
@@ -25,7 +25,7 @@
   {% csrf_token %}
 
   {% for group in tie_groups %}
-  <section class="section tiebreak-section{% if group.is_winner_group %} tiebreak-section--primary{% endif %}">
+  <section class="section tiebreak-section{% if group.is_winner_group %} tiebreak-section--primary{% endif %}" data-vp="{{ group.vp }}">
     {% if group.is_winner_group %}
     <h2>Ganador de la partida</h2>
     <p class="help">
@@ -37,11 +37,10 @@
     <p class="help">
       {{ group.results|length }} jugadores:
       {{ group.player_names|join:", " }}.
-      El elegido obtiene el mejor puesto de este grupo; el resto comparte el siguiente.
     </p>
     {% endif %}
 
-    <div class="tiebreak-options" data-vp="{{ group.vp }}">
+    <div class="tiebreak-mode">
       <label class="tiebreak-option">
         <input type="radio" name="tiebreak_{{ group.vp }}_resolution" value="tie"
           class="resolution-tie" data-vp="{{ group.vp }}"
@@ -52,21 +51,41 @@
         </span>
       </label>
 
-      {% for result in group.results %}
       <label class="tiebreak-option">
-        <input type="radio" name="tiebreak_{{ group.vp }}_resolution" value="winner"
-          class="resolution-winner" data-vp="{{ group.vp }}" data-result-id="{{ result.pk }}"
-          {% if group.resolution == "winner" and group.winner_pk == result.pk %}checked{% endif %}>
+        <input type="radio" name="tiebreak_{{ group.vp }}_resolution" value="rank"
+          class="resolution-rank" data-vp="{{ group.vp }}"
+          {% if group.resolution == "rank" or group.resolution == "winner" %}checked{% endif %}>
         <span class="tiebreak-option__body">
-          <strong>{{ result.player.name }}</strong>
-          {% if group.is_winner_group %}gana la partida{% else %}ocupa el mejor puesto del grupo{% endif %}
-          <span class="meta">{{ result.victory_points }} PV</span>
+          <strong>Definir puesto de cada jugador</strong>
+          <span class="meta">1º, 2º, 3º… dentro de este grupo (afecta puntos de liga).</span>
         </span>
       </label>
-      {% endfor %}
     </div>
-    <input type="hidden" name="tiebreak_{{ group.vp }}_winner" id="tiebreak-winner-{{ group.vp }}"
-      value="{% if group.resolution == 'winner' and group.winner_pk %}{{ group.winner_pk }}{% endif %}">
+
+    <div class="tiebreak-ranks{% if group.resolution != 'rank' and group.resolution != 'winner' %} tiebreak-ranks--hidden{% endif %}"
+         data-vp="{{ group.vp }}" id="tiebreak-ranks-{{ group.vp }}">
+      <p class="help">Puesto dentro del grupo (sin repetir):</p>
+      <ul class="tiebreak-rank-list">
+        {% for row in group.result_rows %}
+        <li class="tiebreak-rank-row">
+          <span class="tiebreak-rank-name">{{ row.result.player.name }}</span>
+          <span class="tiebreak-rank-meta">{{ row.result.victory_points }} PV</span>
+          <label class="tiebreak-rank-select">
+            <span class="visually-hidden">Puesto de {{ row.result.player.name }}</span>
+            <select name="tiebreak_{{ group.vp }}_rank_{{ row.result.pk }}" class="rank-select" data-vp="{{ group.vp }}">
+              <option value="">—</option>
+              {% for result in group.results %}
+              <option value="{{ forloop.counter }}"
+                {% if row.selected_rank == forloop.counter %}selected{% endif %}>
+                {{ forloop.counter }}º
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
   </section>
   {% endfor %}
 
@@ -85,50 +104,55 @@
   const form = document.getElementById("tiebreak-form");
   if (!form) return;
 
-  function hiddenFor(vp) {
-    return document.getElementById("tiebreak-winner-" + vp);
+  function ranksPanel(vp) {
+    return document.getElementById("tiebreak-ranks-" + vp);
   }
 
-  function sectionFor(vp) {
-    return form.querySelector('.tiebreak-options[data-vp="' + vp + '"]');
+  function setRankMode(vp, enabled) {
+    const panel = ranksPanel(vp);
+    if (!panel) return;
+    panel.classList.toggle("tiebreak-ranks--hidden", !enabled);
   }
 
-  form.querySelectorAll(".resolution-winner").forEach((radio) => {
+  form.querySelectorAll(".resolution-rank").forEach((radio) => {
     radio.addEventListener("change", () => {
-      const vp = radio.dataset.vp;
-      const hidden = hiddenFor(vp);
-      const section = sectionFor(vp);
-      if (!hidden || !section) return;
-      section.querySelectorAll(".resolution-tie").forEach((t) => { t.checked = false; });
-      section.querySelectorAll(".resolution-winner").forEach((r) => {
-        if (r !== radio) r.checked = false;
-      });
-      radio.checked = true;
-      hidden.value = radio.dataset.resultId;
+      setRankMode(radio.dataset.vp, true);
     });
   });
 
   form.querySelectorAll(".resolution-tie").forEach((radio) => {
     radio.addEventListener("change", () => {
-      const vp = radio.dataset.vp;
-      const hidden = hiddenFor(vp);
-      const section = sectionFor(vp);
-      if (!hidden || !section) return;
-      hidden.value = "";
-      section.querySelectorAll(".resolution-winner").forEach((r) => { r.checked = false; });
+      setRankMode(radio.dataset.vp, false);
     });
   });
 
   form.addEventListener("submit", (e) => {
-    const sections = form.querySelectorAll(".tiebreak-options");
+    const sections = form.querySelectorAll(".tiebreak-section[data-vp]");
     for (const section of sections) {
       const vp = section.dataset.vp;
       const tieChecked = section.querySelector(".resolution-tie:checked");
-      const hidden = hiddenFor(vp);
-      if (!tieChecked && (!hidden || !hidden.value)) {
+      const rankChecked = section.querySelector(".resolution-rank:checked");
+      if (!tieChecked && !rankChecked) {
         e.preventDefault();
-        alert("Resuelve cada grupo de empate: elige un jugador o marca «Empate (mismo puesto)».");
+        alert("Resuelve cada grupo: «Empate» o «Definir puesto de cada jugador».");
         return;
+      }
+      if (rankChecked) {
+        const selects = section.querySelectorAll('.rank-select[data-vp="' + vp + '"]');
+        const values = [];
+        for (const sel of selects) {
+          if (!sel.value) {
+            e.preventDefault();
+            alert("Asigna un puesto a cada jugador en todos los grupos.");
+            return;
+          }
+          values.push(sel.value);
+        }
+        if (new Set(values).size !== values.length) {
+          e.preventDefault();
+          alert("No repitas puestos dentro del mismo grupo.");
+          return;
+        }
       }
     }
   });

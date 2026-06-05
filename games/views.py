@@ -344,7 +344,15 @@ def _render_tiebreak_page(request, game, groups, form_errors=None):
     tie_groups = []
     for group in groups:
         state = selected_tiebreak_for_group(game, group)
-        tie_groups.append({**group, **state})
+        ranks = state.get("ranks") or {}
+        result_rows = [
+            {
+                "result": result,
+                "selected_rank": ranks.get(result.pk, ""),
+            }
+            for result in group["results"]
+        ]
+        tie_groups.append({**group, **state, "result_rows": result_rows})
     return render(
         request,
         "games/game_tiebreak.html",
