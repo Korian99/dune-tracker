@@ -163,6 +163,12 @@ Optional: remove the `databases:` block from `render.yaml` in this repo so Bluep
 
 ---
 
+## Self-host at home (free, SQLite, Cloudflare Tunnel)
+
+To avoid Render/Neon bills and run on your **home PC** with a public HTTPS link, see **[CLOUDFLARE_HOME.md](CLOUDFLARE_HOME.md)** (mateousa Cloudflare account, no corporate proxy).
+
+---
+
 ## Alternatives to Render (app host)
 
 Any host that runs Python from GitHub works: Fly.io, Koyeb, Railway, PythonAnywhere, a VPS. Use `build.sh` + `gunicorn config.wsgi:application` and set `DATABASE_URL`.
