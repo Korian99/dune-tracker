@@ -192,6 +192,24 @@ python manage.py export_sheet_games liga-n1 -o partidas.txt
 
 League page **Exportar partidas** hits the same format as download. Source data: `games/data/liga_n1_sheet.py`; logic: `games/sheet_io.py`.
 
+### Board Games Companion (BGC) Hive backup
+
+Historical Uprising sessions from the **Board Games Companion** Android app (Flutter Hive `.hive` boxes).
+
+```bash
+# Re-export from a new backup zip or extracted folder
+python manage.py export_bgc_games "BGC Backup 2026-06-06 141651.zip"
+
+# Import bundled data into Liga N°0 (idempotent by import_key bgc-<playthrough-uuid>)
+# Migration `0012` creates `liga-n0` and imports on `migrate` for new databases.
+python manage.py import_bgc_games --league liga-n0
+python manage.py import_bgc_games --source path/to/backup.zip --league liga-n0 --dry-run
+```
+
+- Parser: `games/bgc_hive.py` (BGC model adapters from [BoardGamesCompanion](https://github.com/Progrunning/BoardGamesCompanion))
+- Translation: `games/bgc_io.py` → `games/data/bgc_uprising_import.py` (BGG `397598` only)
+- BGC stores **VP + placement** only; leaders, alliances, Sardaukar, and rounds are not imported.
+
 ## Android (Kotlin) companion
 
 Offline mobile rebuild lives in sibling folder `../dune-tracker-android/` (separate git repo recommended). See `docs/MOBILE_KOTLIN.md` and `dune-tracker-android/docs/LEARNING_PATH.md`.

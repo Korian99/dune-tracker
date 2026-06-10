@@ -8,5 +8,7 @@ venv/
 staticfiles/
 *.egg-info/
 .DS_Store
+_bgc_backup_extract/
+BGC Backup*.zip
 .idea/
 .vscode/
