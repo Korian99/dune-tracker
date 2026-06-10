@@ -281,7 +281,7 @@ def league_standings(league: League):
 
         score_total = round(sum(x[0] for x in all_games), 1)
         score_best_n = round(sum(x[0] for x in counted), 1)
-        wins = sum(1 for x in all_games if x[1].is_winner)
+        wins = sum(1 for x in all_games if x[1].placement == 1)
         win_rate = (
             round(100 * wins / games_played, 1) if games_played else 0.0
         )

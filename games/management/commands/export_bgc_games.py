@@ -20,13 +20,14 @@ def _format_game(game: dict) -> str:
         lines.append(f'        "rounds": {game["rounds"]},')
     lines.append('        "results": [')
     for row in game["results"]:
-        lines.append(
-            "            {"
-            f'"player": "{row["player"]}", '
-            f'"leader": "{row["leader"]}", '
-            f'"victory_points": {row["victory_points"]}'
-            "},"
-        )
+        parts = [
+            f'"player": "{row["player"]}"',
+            f'"leader": "{row["leader"]}"',
+            f'"victory_points": {row["victory_points"]}',
+        ]
+        if row.get("bgc_placement") is not None:
+            parts.append(f'"bgc_placement": {row["bgc_placement"]}')
+        lines.append("            {" + ", ".join(parts) + "},")
     lines.append("        ],")
     lines.append("    },")
     return "\n".join(lines)

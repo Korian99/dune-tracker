@@ -134,6 +134,21 @@ class StatsQueriesTests(TestCase):
         self.assertEqual(rows["Bob"]["placement_1"], 1)
         self.assertEqual(rows["Bob"]["placement_2"], 1)
 
+    def test_wins_match_first_place_count(self):
+        g = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g, player=self.player_a, victory_points=10, order=0
+        )
+        GameResult.objects.create(
+            game=g, player=self.player_b, victory_points=10, order=1
+        )
+        results = GameResult.objects.filter(game__league=self.league)
+        rows = {r["name"]: r for r in aggregate_player_stats(results)}
+        self.assertEqual(rows["Ana"]["placement_1"], 1)
+        self.assertEqual(rows["Bob"]["placement_1"], 1)
+        self.assertEqual(rows["Ana"]["wins"], rows["Ana"]["placement_1"])
+        self.assertEqual(rows["Bob"]["wins"], rows["Bob"]["placement_1"])
+
     def test_single_league_stats_attaches_placement_counts(self):
         g = self._game(league=self.league)
         GameResult.objects.create(

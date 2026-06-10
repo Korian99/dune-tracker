@@ -67,6 +67,11 @@ def _empty_placement_counts() -> dict[int, int]:
     return {1: 0, 2: 0, 3: 0, 4: 0}
 
 
+def _count_wins(game_results) -> int:
+    """Games finished 1st (matches placement_1 column; includes shared 1st on ties)."""
+    return sum(1 for r in game_results if r.placement == 1)
+
+
 def _placement_counts_for_results(results) -> dict[str, dict[int, int]]:
     """Per player name: how many finishes at each placement (1–4)."""
     by_player: dict[str, dict[int, int]] = defaultdict(_empty_placement_counts)
@@ -109,7 +114,7 @@ def aggregate_player_stats(results) -> list[dict]:
     rows = []
     for name, game_results in by_player.items():
         games_played = len(game_results)
-        wins = sum(1 for r in game_results if r.is_winner)
+        wins = _count_wins(game_results)
         vp_sum = sum(r.victory_points for r in game_results)
         placement_sum = sum(r.placement for r in game_results)
         avg_placement = placement_sum / games_played if games_played else 0
@@ -145,7 +150,7 @@ def aggregate_leader_stats(results) -> list[dict]:
     rows = []
     for leader, game_results in by_leader.items():
         times = len(game_results)
-        wins = sum(1 for r in game_results if r.is_winner)
+        wins = _count_wins(game_results)
         vp_sum = sum(r.victory_points for r in game_results)
         placement_sum = sum(r.placement for r in game_results)
         avg_placement = placement_sum / times if times else 0

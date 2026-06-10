@@ -102,13 +102,15 @@ def games_from_bgc_directory(
             vp = score.get("victory_points")
             if vp is None:
                 continue
-            results.append(
-                {
-                    "player": name,
-                    "leader": "",
-                    "victory_points": int(vp),
-                }
-            )
+            row: dict[str, Any] = {
+                "player": name,
+                "leader": "",
+                "victory_points": int(vp),
+            }
+            placement = score.get("placement")
+            if placement is not None:
+                row["bgc_placement"] = int(placement)
+            results.append(row)
 
         if len(results) < 2:
             continue

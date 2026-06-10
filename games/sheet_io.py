@@ -10,11 +10,14 @@ import re
 from datetime import date, datetime
 from typing import Any, Iterable
 
+from collections import defaultdict
+
 from django.db import transaction
 
 from .leaders import LEADER_NAMES
 from .models import Game, GameResult, League, resolve_player
 from .scoring import _has_highest_vp, resolve_scoring_config
+from .tiebreak import apply_tiebreak
 
 IMPORT_NOTE_PREFIX = "import_key="
 
@@ -106,6 +109,29 @@ def game_already_imported(league: League, import_key: str) -> bool:
     return Game.objects.filter(league=league, notes__contains=marker).exists()
 
 
+def apply_bgc_placements(game: Game, results_data: list[dict[str, Any]]) -> None:
+    """
+    Resolve VP ties using BGC manual placement (bgc_placement per result row).
+    """
+    by_name = {r.player.name: r for r in game.results.select_related("player")}
+    by_vp: dict[int, list[tuple[int, GameResult]]] = defaultdict(list)
+    for row in results_data:
+        placement = row.get("bgc_placement")
+        if placement is None:
+            continue
+        result = by_name.get(row["player"])
+        if result is None:
+            continue
+        by_vp[result.victory_points].append((int(placement), result))
+
+    for vp, items in by_vp.items():
+        if len(items) < 2:
+            continue
+        order = [r.pk for _, r in sorted(items, key=lambda x: (x[0], x[1].pk))]
+        apply_tiebreak(game, "rank", order_result_ids=order, vp=vp)
+    game.refresh_from_db()
+
+
 @transaction.atomic
 def import_games_for_league(
     league: League,
@@ -152,6 +178,8 @@ def import_games_for_league(
                 alliance_fremen=row["alliance_fremen"],
                 order=order,
             )
+        if any(r.get("bgc_placement") is not None for r in game_data["results"]):
+            apply_bgc_placements(game, game_data["results"])
         created += 1
     return created, skipped
 

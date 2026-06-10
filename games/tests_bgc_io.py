@@ -6,8 +6,8 @@ from django.test import TestCase
 from .bgc_io import BGC_IMPORT_PREFIX, games_from_bgc_directory
 from .bgc_hive import load_players
 from .data.bgc_uprising_import import BGC_UPRISING_GAMES
-from .models import Game, League
-from .sheet_io import import_games_for_league
+from .models import Game, GameResult, League, resolve_player
+from .sheet_io import apply_bgc_placements, import_games_for_league
 
 BACKUP = Path(__file__).resolve().parent.parent / "_bgc_backup_extract"
 
@@ -39,6 +39,31 @@ class BgcImportTests(TestCase):
         created2, skipped2 = import_games_for_league(league, sample)
         self.assertEqual(created2, 0)
         self.assertEqual(skipped2, 1)
+
+    def test_apply_bgc_placements_resolves_vp_tie(self):
+        league = League.objects.create(name="BGC tie", slug="bgc-tie")
+        game = Game.objects.create(
+            league=league,
+            played_on=date.today(),
+            player_count=2,
+            base_game=Game.BaseGame.UPRISING,
+            bloodlines=True,
+        )
+        a = resolve_player("Ana", league=league)
+        b = resolve_player("Bob", league=league)
+        ra = GameResult.objects.create(game=game, player=a, victory_points=10)
+        rb = GameResult.objects.create(game=game, player=b, victory_points=10)
+        apply_bgc_placements(
+            game,
+            [
+                {"player": "Ana", "bgc_placement": 2},
+                {"player": "Bob", "bgc_placement": 1},
+            ],
+        )
+        self.assertEqual(ra.placement, 2)
+        self.assertEqual(rb.placement, 1)
+        self.assertTrue(rb.is_winner)
+        self.assertFalse(ra.is_winner)
 
     def test_liga_n0_migration_imports_bgc_games(self):
         import importlib
