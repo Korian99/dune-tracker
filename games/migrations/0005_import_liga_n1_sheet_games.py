@@ -10,8 +10,8 @@ def import_liga_n1_games(apps, schema_editor):
 
     # RunPython gives historical models; import uses the live ORM.
     from games.models import League
-    from games.data.liga_n1_sheet import LIGA_N1_GAMES
-    from games.sheet_io import import_games_for_league
+    from games.data.liga_n1 import LIGA_N1_GAMES
+    from games.integrations.sheet_io import import_games_for_league
 
     league = League.objects.get(pk=historical.pk)
     import_games_for_league(league, LIGA_N1_GAMES)

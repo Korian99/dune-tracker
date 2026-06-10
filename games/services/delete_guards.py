@@ -3,7 +3,7 @@
 from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
 
-from .models import GameResult, League, Player
+from games.models import GameResult, League, Player
 
 MSG_LEAGUE_HAS_GAMES = (
     "No se puede eliminar una liga que tiene partidas registradas."

@@ -2,9 +2,9 @@ from datetime import date
 
 from django.test import TestCase
 
-from .data.liga_n1_sheet import LIGA_N1_GAMES
-from .models import Game, GameResult, League, Player
-from .sheet_io import (
+from games.data.liga_n1 import LIGA_N1_GAMES
+from games.models import Game, GameResult, League, Player
+from games.integrations.sheet_io import (
     export_league_sheet,
     format_duration_minutes,
     import_games_for_league,
@@ -27,7 +27,7 @@ class SheetIoTests(TestCase):
         self.assertEqual(created, 11)
         self.assertEqual(skipped, 0)
         self.assertEqual(self.league.games.count(), 11)
-        self.assertEqual(Player.objects.count(), 6)
+        self.assertEqual(self.league.players.count(), 6)
 
         created2, skipped2 = import_games_for_league(self.league, LIGA_N1_GAMES)
         self.assertEqual(created2, 0)

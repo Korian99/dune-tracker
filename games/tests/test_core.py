@@ -3,11 +3,11 @@ from datetime import date, timedelta
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from .forms import GameAllianceForm, LeagueForm
-from .hitos import ensure_default_hitos
-from .models import Game, GameResult, League, Player, resolve_player
-from .views import _apply_alliances
-from .scoring import (
+from games.forms import GameAllianceForm, LeagueForm
+from games.services.hitos import ensure_default_hitos
+from games.models import Game, GameResult, League, Player, resolve_player
+from games.views import _apply_alliances
+from games.services.scoring import (
     compute_league_points,
     compute_league_points_breakdown,
     config_from_form_data,
@@ -184,7 +184,7 @@ class LeagueScoringTests(TestCase):
         self.assertEqual(cfg["vp_thresholds"], [10, 15])
 
     def test_parse_vp_thresholds_input(self):
-        from .scoring import parse_vp_thresholds_input
+        from games.services.scoring import parse_vp_thresholds_input
 
         self.assertEqual(parse_vp_thresholds_input("10, 12, 15"), [10, 12, 15])
         self.assertEqual(parse_vp_thresholds_input("15 10"), [10, 15])

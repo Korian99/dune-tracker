@@ -1,8 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from games.data.liga_n1_sheet import LIGA_N1_GAMES
+from games.data.liga_n1 import LIGA_N1_GAMES
+from games.integrations.sheet_io import import_games_for_league
 from games.models import League
-from games.sheet_io import import_games_for_league
 
 
 class Command(BaseCommand):

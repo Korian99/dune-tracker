@@ -5,13 +5,13 @@ from django.core.exceptions import ValidationError
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from .admin import LeagueAdmin
-from .delete_guards import (
+from games.admin import LeagueAdmin
+from games.services.delete_guards import (
     ensure_league_can_delete,
     ensure_league_roster_can_remove,
     ensure_player_can_delete,
 )
-from .models import Game, GameResult, League, LeagueMembership, Player, resolve_player
+from games.models import Game, GameResult, League, LeagueMembership, Player, resolve_player
 
 
 class DeleteGuardTests(TestCase):

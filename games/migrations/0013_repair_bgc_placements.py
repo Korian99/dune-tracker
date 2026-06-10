@@ -4,9 +4,9 @@ from django.db import migrations
 
 
 def repair_bgc_placements(apps, schema_editor):
-    from games.data.bgc_uprising_import import BGC_UPRISING_GAMES
+    from games.data.bgc_uprising import BGC_UPRISING_GAMES
+    from games.integrations.sheet_io import IMPORT_NOTE_PREFIX, apply_bgc_placements
     from games.models import Game, League
-    from games.sheet_io import IMPORT_NOTE_PREFIX, apply_bgc_placements
 
     try:
         league = League.objects.get(slug="liga-n0")

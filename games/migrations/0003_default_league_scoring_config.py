@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 
-import games.defaults
+import games.services.defaults as games_defaults
 
 
 def _needs_standard_default(config) -> bool:
@@ -16,8 +16,8 @@ def _needs_standard_default(config) -> bool:
 
 def seed_league_scoring(apps, schema_editor):
     League = apps.get_model("games", "League")
-    default_config = games.defaults.default_league_scoring_config()
-    default_notes = games.defaults.DEFAULT_LEAGUE_SCORING_NOTES.strip()
+    default_config = games_defaults.default_league_scoring_config()
+    default_notes = games_defaults.DEFAULT_LEAGUE_SCORING_NOTES.strip()
 
     for league in League.objects.all():
         config = league.scoring_config or {}
@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
             name="scoring_config",
             field=models.JSONField(
                 blank=True,
-                default=games.defaults.default_league_scoring_config,
+                default=games_defaults.default_league_scoring_config,
                 help_text="Structured scoring JSON — see games/defaults.py and games/scoring.py",
             ),
         ),

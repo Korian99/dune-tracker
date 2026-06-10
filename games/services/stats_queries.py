@@ -6,7 +6,8 @@ from collections import defaultdict
 
 from django.db.models import Avg, Count, Q
 
-from .models import Game, GameResult, League
+from games.models import Game, GameResult, League
+
 from .scoring import league_standings
 
 

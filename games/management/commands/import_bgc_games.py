@@ -2,10 +2,10 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
-from games.bgc_io import games_from_bgc_directory, games_from_bgc_zip
-from games.data.bgc_uprising_import import BGC_UPRISING_GAMES
+from games.data.bgc_uprising import BGC_UPRISING_GAMES
+from games.integrations.bgc.io import games_from_bgc_directory, games_from_bgc_zip
+from games.integrations.sheet_io import import_games_for_league
 from games.models import League
-from games.sheet_io import import_games_for_league
 
 
 class Command(BaseCommand):
@@ -19,7 +19,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--source",
-            help="Optional BGC .zip or extracted folder; defaults to bundled bgc_uprising_import.py.",
+            help="Optional BGC .zip or extracted folder; defaults to bundled bgc_uprising.py.",
         )
         parser.add_argument(
             "--dry-run",

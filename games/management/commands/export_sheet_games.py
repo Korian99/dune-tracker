@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from games.models import League
-from games.sheet_io import export_league_sheet
+from games.integrations.sheet_io import export_league_sheet
 
 
 class Command(BaseCommand):

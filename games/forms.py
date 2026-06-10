@@ -1,9 +1,9 @@
 from django import forms
 from django.forms import inlineformset_factory
 
-from .leaders import LEADER_CHOICES
-from .models import Game, GameResult, League, Player, resolve_player
-from .scoring import (
+from games.models import Game, GameResult, League, Player, resolve_player
+from games.services.leaders import LEADER_CHOICES
+from games.services.scoring import (
     config_from_form_data,
     config_to_form_initial,
     format_vp_thresholds_display,
@@ -93,7 +93,7 @@ class LeagueForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        from .hitos import powerscore_hito
+        from games.services.hitos import powerscore_hito
 
         super().__init__(*args, **kwargs)
         if self.instance.pk:
@@ -135,7 +135,7 @@ class LeagueForm(forms.ModelForm):
         return format_vp_thresholds_display(parsed)
 
     def save(self, commit=True):
-        from .hitos import ensure_default_hitos, powerscore_hito
+        from games.services.hitos import ensure_default_hitos, powerscore_hito
 
         league = super().save(commit=False)
         league.scoring_config = config_from_form_data(self.cleaned_data)

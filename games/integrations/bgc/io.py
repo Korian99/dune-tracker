@@ -12,7 +12,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from .bgc_hive import decode_playthrough, decode_score, load_players, read_box
+from .hive import decode_playthrough, decode_score, load_players, read_box
 
 DUNE_UPRISING_BGG = "397598"
 DUNE_IMPERIUM_BGG = "316554"

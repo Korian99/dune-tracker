@@ -7,7 +7,7 @@ Guide for AI agents and developers working on this repository.
 | Audience | Language | Where |
 |----------|----------|--------|
 | **End users** (UI) | **Spanish** | Templates (`templates/`), form labels/help/errors (`games/forms.py`), model `TextChoices` display labels, validation messages shown in the browser |
-| **Developers** | **English** | This file, `README.md`, code comments, docstrings, commit messages, variable/function names, `games/scoring.py`, Django admin (optional English) |
+| **Developers** | **English** | This file, `README.md`, code comments, docstrings, commit messages, variable/function names, `games/services/`, Django admin (optional English) |
 
 Do not mix languages on the same surface. When adding features:
 
@@ -20,27 +20,29 @@ Product names stay as published: *Dune: Imperium*, *Uprising*, *Bloodlines*, fac
 
 ## Project summary
 
-Django web app to log **Dune: Imperium — Uprising** (+ **Bloodlines**) board game sessions: players, leaders, VP, alliances, Sardaukar counts, rounds, duration, and **leagues** with standard placement + bonus scoring (`games/scoring.py`).
+Django web app to log **Dune: Imperium — Uprising** (+ **Bloodlines**) board game sessions: players, leaders, VP, alliances, Sardaukar counts, rounds, duration, and **leagues** with standard placement + bonus scoring (`games/services/scoring.py`).
 
 Stack: Django 5, SQLite (local) / PostgreSQL (Render), WhiteNoise, Gunicorn.
 
 ## Layout
 
 ```
-config/           # settings, root URLs
-games/            # main app
-  models.py       # Player, League, LeagueMembership, Game, GameResult
-  forms.py        # GameForm, GameResultFormSet, LeagueForm, LeagueAddPlayerForm
-  views.py        # CRUD + stats
-  scoring.py      # League points (standard + victory_points override)
-  urls.py
-templates/games/  # Spanish UI
-static/css/       # style.css, select2-dune.css
-static/js/        # enhanced-selects.js (game form only)
-static/vendor/    # jquery, select2 (vendored)
-AGENTS.md         # this file (English)
-README.md         # developer setup (English)
+config/              # settings, root URLs
+games/               # main Django app
+  models.py, views.py, forms.py, urls.py, admin.py
+  services/          # domain logic (scoring, tiebreak, hitos, stats, leaders)
+  integrations/      # external IO (sheet_io, worker_sync, bgc/)
+  admin_helpers/     # admin auth + mixins (not games/admin.py)
+  data/              # bundled import payloads (liga_n1, bgc_uprising, …)
+  tests/             # test_*.py
+  management/commands/
+templates/games/     # Spanish UI
+static/              # css/, js/, img/, vendor/
+AGENTS.md            # this file (English)
+README.md            # developer setup (English)
 ```
+
+Import domain code from `games.services.*` and IO from `games.integrations.*` (migrations use these paths too).
 
 ## Data model
 
@@ -108,7 +110,7 @@ README.md         # developer setup (English)
 
 ## League scoring
 
-Implemented in `games/scoring.py`:
+Implemented in `games/services/scoring.py`:
 
 - `compute_league_points(result, league)` — total points for one player in one game
 - `compute_league_points_breakdown(result, league)` — components (placement, bonuses)
@@ -190,7 +192,7 @@ python manage.py export_sheet_games liga-n1
 python manage.py export_sheet_games liga-n1 -o partidas.txt
 ```
 
-League page **Exportar partidas** hits the same format as download. Source data: `games/data/liga_n1_sheet.py`; logic: `games/sheet_io.py`.
+League page **Exportar partidas** hits the same format as download. Source data: `games/data/liga_n1.py`; logic: `games/integrations/sheet_io.py`.
 
 ### Board Games Companion (BGC) Hive backup
 
@@ -207,7 +209,7 @@ python manage.py import_bgc_games --source path/to/backup.zip --league liga-n0 -
 ```
 
 - Parser: `games/bgc_hive.py` (BGC model adapters from [BoardGamesCompanion](https://github.com/Progrunning/BoardGamesCompanion))
-- Translation: `games/bgc_io.py` → `games/data/bgc_uprising_import.py` (BGG `397598` only)
+- Translation: `games/integrations/bgc/io.py` → `games/data/bgc_uprising.py` (BGG `397598` only)
 - BGC stores **VP + placement** only; leaders, alliances, Sardaukar, and rounds are not imported.
 
 ## Android (Kotlin) companion

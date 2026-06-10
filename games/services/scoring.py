@@ -18,7 +18,7 @@ from collections import defaultdict
 from typing import Any, TypedDict
 
 from .defaults import DEFAULT_LEAGUE_SCORING_NOTES, default_league_scoring_config
-from .models import GameResult, League
+from games.models import GameResult, League
 
 DEFAULT_SCORING_NOTES = DEFAULT_LEAGUE_SCORING_NOTES
 

@@ -1,12 +1,12 @@
 """
 Historical Dune: Imperium — Uprising games imported from Board Games Companion.
 
-Source: _bgc_backup_extract
+Source: Django DB (league liga-n0)
 BGG id: 397598
-Games: 75
+Games: 64
 
 Imported via `python manage.py import_bgc_games`; idempotent by import_key.
-Leaders, alliances, and Sardaukar were not tracked in BGC and are left empty.
+Leaders may be synced from live DB via `python manage.py sync_bgc_leaders`.
 """
 
 from datetime import date
@@ -184,7 +184,7 @@ BGC_UPRISING_GAMES = [
         "results": [
             {"player": "Anita", "leader": "", "victory_points": 13, "bgc_placement": 1},
             {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "Matute", "leader": "", "victory_points": 6, "bgc_placement": 3},
+            {"player": "Matías", "leader": "", "victory_points": 6, "bgc_placement": 3},
         ],
     },
     {
@@ -195,7 +195,7 @@ BGC_UPRISING_GAMES = [
             {"player": "Anita", "leader": "", "victory_points": 14, "bgc_placement": 1},
             {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 2},
             {"player": "Cruh", "leader": "", "victory_points": 7, "bgc_placement": 3},
-            {"player": "Matute", "leader": "", "victory_points": 6, "bgc_placement": 4},
+            {"player": "Matías", "leader": "", "victory_points": 6, "bgc_placement": 4},
         ],
     },
     {
@@ -206,7 +206,7 @@ BGC_UPRISING_GAMES = [
             {"player": "Pitufo", "leader": "", "victory_points": 10, "bgc_placement": 1},
             {"player": "Roger", "leader": "", "victory_points": 8, "bgc_placement": 2},
             {"player": "Hector", "leader": "", "victory_points": 8, "bgc_placement": 3},
-            {"player": "Matute", "leader": "", "victory_points": 5, "bgc_placement": 4},
+            {"player": "Matías", "leader": "", "victory_points": 5, "bgc_placement": 4},
         ],
     },
     {
@@ -216,7 +216,7 @@ BGC_UPRISING_GAMES = [
         "results": [
             {"player": "Pitufo", "leader": "", "victory_points": 13, "bgc_placement": 1},
             {"player": "Roger", "leader": "", "victory_points": 11, "bgc_placement": 2},
-            {"player": "Matute", "leader": "", "victory_points": 10, "bgc_placement": 3},
+            {"player": "Matías", "leader": "", "victory_points": 10, "bgc_placement": 3},
         ],
     },
     {
@@ -224,7 +224,7 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 1, 17),
         "duration_minutes": 221,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 11, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 11, "bgc_placement": 1},
             {"player": "Hector", "leader": "", "victory_points": 10, "bgc_placement": 2},
             {"player": "Pitufo", "leader": "", "victory_points": 9, "bgc_placement": 3},
             {"player": "Roger", "leader": "", "victory_points": 9, "bgc_placement": 4},
@@ -235,7 +235,7 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 1, 24),
         "duration_minutes": 190,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 13, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 13, "bgc_placement": 1},
             {"player": "Pitufo", "leader": "", "victory_points": 8, "bgc_placement": 2},
             {"player": "Cabro", "leader": "", "victory_points": 4, "bgc_placement": 3},
         ],
@@ -245,10 +245,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 1, 24),
         "duration_minutes": 198,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 13, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 13, "bgc_placement": 1},
             {"player": "Pitufo", "leader": "", "victory_points": 8, "bgc_placement": 2},
             {"player": "Roger", "leader": "", "victory_points": 7, "bgc_placement": 3},
-            {"player": "kori", "leader": "", "victory_points": 7, "bgc_placement": 4},
+            {"player": "Kori", "leader": "", "victory_points": 7, "bgc_placement": 4},
         ],
     },
     {
@@ -257,9 +257,9 @@ BGC_UPRISING_GAMES = [
         "duration_minutes": 347,
         "results": [
             {"player": "Roger", "leader": "", "victory_points": 12, "bgc_placement": 1},
-            {"player": "Matute", "leader": "", "victory_points": 12, "bgc_placement": 2},
+            {"player": "Matías", "leader": "", "victory_points": 12, "bgc_placement": 2},
             {"player": "Pitufo", "leader": "", "victory_points": 9, "bgc_placement": 3},
-            {"player": "kori", "leader": "", "victory_points": 3, "bgc_placement": 4},
+            {"player": "Kori", "leader": "", "victory_points": 3, "bgc_placement": 4},
         ],
     },
     {
@@ -268,7 +268,7 @@ BGC_UPRISING_GAMES = [
         "duration_minutes": 283,
         "results": [
             {"player": "Roger", "leader": "", "victory_points": 12, "bgc_placement": 1},
-            {"player": "kori", "leader": "", "victory_points": 6, "bgc_placement": 2},
+            {"player": "Kori", "leader": "", "victory_points": 6, "bgc_placement": 2},
             {"player": "Pitufo", "leader": "", "victory_points": 5, "bgc_placement": 3},
         ],
     },
@@ -277,10 +277,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 1, 31),
         "duration_minutes": 368,
         "results": [
-            {"player": "Hector", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Roger", "leader": "", "victory_points": 11, "bgc_placement": 2},
-            {"player": "Pitufo", "leader": "", "victory_points": 10, "bgc_placement": 3},
-            {"player": "kori", "leader": "", "victory_points": 8, "bgc_placement": 4},
+            {"player": "Hector", "leader": "Piter de Vries", "victory_points": 11, "bgc_placement": 1},
+            {"player": "Roger", "leader": "Kota Odax of Ix", "victory_points": 11, "bgc_placement": 2},
+            {"player": "Pitufo", "leader": "Duncan Idaho", "victory_points": 10, "bgc_placement": 3},
+            {"player": "Kori", "leader": "Steersman Y'Rkoon", "victory_points": 8, "bgc_placement": 4},
         ],
     },
     {
@@ -290,7 +290,7 @@ BGC_UPRISING_GAMES = [
         "results": [
             {"player": "Roger", "leader": "", "victory_points": 11, "bgc_placement": 1},
             {"player": "Pitufo", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "kori", "leader": "", "victory_points": 5, "bgc_placement": 3},
+            {"player": "Kori", "leader": "", "victory_points": 5, "bgc_placement": 3},
         ],
     },
     {
@@ -301,7 +301,7 @@ BGC_UPRISING_GAMES = [
             {"player": "Pitufo", "leader": "", "victory_points": 11, "bgc_placement": 1},
             {"player": "Nico", "leader": "", "victory_points": 10, "bgc_placement": 2},
             {"player": "Hector", "leader": "", "victory_points": 9, "bgc_placement": 3},
-            {"player": "kori", "leader": "", "victory_points": 7, "bgc_placement": 4},
+            {"player": "Kori", "leader": "", "victory_points": 7, "bgc_placement": 4},
         ],
     },
     {
@@ -311,7 +311,7 @@ BGC_UPRISING_GAMES = [
         "results": [
             {"player": "Anita", "leader": "", "victory_points": 13, "bgc_placement": 1},
             {"player": "Pitufo", "leader": "", "victory_points": 11, "bgc_placement": 2},
-            {"player": "Matute", "leader": "", "victory_points": 11, "bgc_placement": 3},
+            {"player": "Matías", "leader": "", "victory_points": 11, "bgc_placement": 3},
             {"player": "Roger", "leader": "", "victory_points": 7, "bgc_placement": 4},
         ],
     },
@@ -321,7 +321,7 @@ BGC_UPRISING_GAMES = [
         "duration_minutes": 120,
         "results": [
             {"player": "Pitufo", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Matute", "leader": "", "victory_points": 8, "bgc_placement": 2},
+            {"player": "Matías", "leader": "", "victory_points": 8, "bgc_placement": 2},
             {"player": "Roger", "leader": "", "victory_points": 6, "bgc_placement": 3},
             {"player": "Anita", "leader": "", "victory_points": 5, "bgc_placement": 4},
         ],
@@ -331,9 +331,9 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 2, 22),
         "duration_minutes": 128,
         "results": [
-            {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 1},
-            {"player": "Matute", "leader": "", "victory_points": 8, "bgc_placement": 2},
-            {"player": "Pitufo", "leader": "", "victory_points": 8, "bgc_placement": 3},
+            {"player": "Roger", "leader": "Gurney Halleck", "victory_points": 10, "bgc_placement": 1},
+            {"player": "Matías", "leader": "Princess Irulan", "victory_points": 8, "bgc_placement": 2},
+            {"player": "Pitufo", "leader": "Esmar Tuek", "victory_points": 8, "bgc_placement": 3},
         ],
     },
     {
@@ -341,9 +341,9 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 2, 22),
         "duration_minutes": 142,
         "results": [
-            {"player": "Pitufo", "leader": "", "victory_points": 12, "bgc_placement": 1},
-            {"player": "Matute", "leader": "", "victory_points": 7, "bgc_placement": 2},
-            {"player": "Roger", "leader": "", "victory_points": 3, "bgc_placement": 3},
+            {"player": "Pitufo", "leader": "Piter de Vries", "victory_points": 12, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 7, "bgc_placement": 2},
+            {"player": "Roger", "leader": "Gurney Halleck", "victory_points": 3, "bgc_placement": 3},
         ],
     },
     {
@@ -352,7 +352,7 @@ BGC_UPRISING_GAMES = [
         "duration_minutes": 146,
         "results": [
             {"player": "Roger", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Matute", "leader": "", "victory_points": 10, "bgc_placement": 2},
+            {"player": "Matías", "leader": "", "victory_points": 10, "bgc_placement": 2},
             {"player": "Pitufo", "leader": "", "victory_points": 8, "bgc_placement": 3},
         ],
     },
@@ -361,7 +361,7 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 2, 28),
         "duration_minutes": 120,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 10, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 10, "bgc_placement": 1},
             {"player": "Roger", "leader": "", "victory_points": 9, "bgc_placement": 2},
             {"player": "Pitufo", "leader": "", "victory_points": 9, "bgc_placement": 3},
         ],
@@ -371,7 +371,7 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 2, 28),
         "duration_minutes": 120,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 12, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 12, "bgc_placement": 1},
             {"player": "Pitufo", "leader": "", "victory_points": 9, "bgc_placement": 2},
             {"player": "Roger", "leader": "", "victory_points": 7, "bgc_placement": 3},
         ],
@@ -381,9 +381,9 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 5),
         "duration_minutes": 240,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 14, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 14, "bgc_placement": 1},
             {"player": "Pitufo", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "kori", "leader": "", "victory_points": 10, "bgc_placement": 3},
+            {"player": "Kori", "leader": "", "victory_points": 10, "bgc_placement": 3},
             {"player": "Nano", "leader": "", "victory_points": 8, "bgc_placement": 4},
         ],
     },
@@ -394,8 +394,8 @@ BGC_UPRISING_GAMES = [
         "results": [
             {"player": "Pitufo", "leader": "", "victory_points": 12, "bgc_placement": 1},
             {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "kori", "leader": "", "victory_points": 10, "bgc_placement": 3},
-            {"player": "Matute", "leader": "", "victory_points": 10, "bgc_placement": 4},
+            {"player": "Kori", "leader": "", "victory_points": 10, "bgc_placement": 3},
+            {"player": "Matías", "leader": "", "victory_points": 10, "bgc_placement": 4},
         ],
     },
     {
@@ -405,7 +405,7 @@ BGC_UPRISING_GAMES = [
         "results": [
             {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 1},
             {"player": "Pitufo", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "kori", "leader": "", "victory_points": 8, "bgc_placement": 3},
+            {"player": "Kori", "leader": "", "victory_points": 8, "bgc_placement": 3},
             {"player": "Nano", "leader": "", "victory_points": 5, "bgc_placement": 4},
         ],
     },
@@ -414,7 +414,7 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 7),
         "duration_minutes": 150,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 12, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 12, "bgc_placement": 1},
             {"player": "Roger", "leader": "", "victory_points": 11, "bgc_placement": 2},
             {"player": "Pitufo", "leader": "", "victory_points": 8, "bgc_placement": 3},
             {"player": "Nano", "leader": "", "victory_points": 7, "bgc_placement": 4},
@@ -425,9 +425,9 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 12),
         "duration_minutes": 180,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 14, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 14, "bgc_placement": 1},
             {"player": "Pitufo", "leader": "", "victory_points": 12, "bgc_placement": 2},
-            {"player": "kori", "leader": "", "victory_points": 10, "bgc_placement": 3},
+            {"player": "Kori", "leader": "", "victory_points": 10, "bgc_placement": 3},
             {"player": "Nano", "leader": "", "victory_points": 5, "bgc_placement": 4},
         ],
     },
@@ -436,10 +436,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 15),
         "duration_minutes": 102,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Pitufo", "leader": "", "victory_points": 8, "bgc_placement": 2},
-            {"player": "Roger", "leader": "", "victory_points": 5, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 4, "bgc_placement": 4},
+            {"player": "Matías", "leader": "Liet Kynes", "victory_points": 11, "bgc_placement": 1},
+            {"player": "Pitufo", "leader": "Esmar Tuek", "victory_points": 8, "bgc_placement": 2},
+            {"player": "Roger", "leader": "Staban Tuek", "victory_points": 5, "bgc_placement": 3},
+            {"player": "Nano", "leader": "Princess Irulan", "victory_points": 4, "bgc_placement": 4},
         ],
     },
     {
@@ -447,10 +447,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 15),
         "duration_minutes": 134,
         "results": [
-            {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 1},
-            {"player": "Matute", "leader": "", "victory_points": 7, "bgc_placement": 2},
-            {"player": "Pitufo", "leader": "", "victory_points": 7, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 6, "bgc_placement": 4},
+            {"player": "Roger", "leader": "Esmar Tuek", "victory_points": 10, "bgc_placement": 1},
+            {"player": "Matías", "leader": "Feyd-Rautha Harkonnen", "victory_points": 7, "bgc_placement": 2},
+            {"player": "Pitufo", "leader": "Liet Kynes", "victory_points": 7, "bgc_placement": 3},
+            {"player": "Nano", "leader": "Piter de Vries", "victory_points": 6, "bgc_placement": 4},
         ],
     },
     {
@@ -458,7 +458,7 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 15),
         "duration_minutes": 134,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 13, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 13, "bgc_placement": 1},
             {"player": "Nano", "leader": "", "victory_points": 11, "bgc_placement": 2},
             {"player": "Pitufo", "leader": "", "victory_points": 9, "bgc_placement": 3},
             {"player": "Roger", "leader": "", "victory_points": 9, "bgc_placement": 4},
@@ -469,10 +469,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 19),
         "duration_minutes": 140,
         "results": [
-            {"player": "Pitufo", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Matute", "leader": "", "victory_points": 11, "bgc_placement": 2},
-            {"player": "kori", "leader": "", "victory_points": 10, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 7, "bgc_placement": 4},
+            {"player": "Pitufo", "leader": "Kota Odax of Ix", "victory_points": 11, "bgc_placement": 1},
+            {"player": "Matías", "leader": "Gaius Helen Mohiam", "victory_points": 11, "bgc_placement": 2},
+            {"player": "Kori", "leader": "Count Hasimir Fenring", "victory_points": 10, "bgc_placement": 3},
+            {"player": "Nano", "leader": "Esmar Tuek", "victory_points": 7, "bgc_placement": 4},
         ],
     },
     {
@@ -480,10 +480,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 23),
         "duration_minutes": 120,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Pitufo", "leader": "", "victory_points": 8, "bgc_placement": 2},
-            {"player": "kori", "leader": "", "victory_points": 7, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 5, "bgc_placement": 4},
+            {"player": "Matías", "leader": "Liet Kynes", "victory_points": 11, "bgc_placement": 1},
+            {"player": "Pitufo", "leader": "Kota Odax of Ix", "victory_points": 8, "bgc_placement": 2},
+            {"player": "Kori", "leader": "Esmar Tuek", "victory_points": 7, "bgc_placement": 3},
+            {"player": "Nano", "leader": "Shadam Corrino IV", "victory_points": 5, "bgc_placement": 4},
         ],
     },
     {
@@ -491,10 +491,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 23),
         "duration_minutes": 120,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 12, "bgc_placement": 1},
-            {"player": "Pitufo", "leader": "", "victory_points": 11, "bgc_placement": 2},
-            {"player": "kori", "leader": "", "victory_points": 9, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 9, "bgc_placement": 4},
+            {"player": "Matías", "leader": "Gurney Halleck", "victory_points": 12, "bgc_placement": 1},
+            {"player": "Pitufo", "leader": "Chani", "victory_points": 11, "bgc_placement": 2},
+            {"player": "Kori", "leader": "Kota Odax of Ix", "victory_points": 9, "bgc_placement": 3},
+            {"player": "Nano", "leader": "Liet Kynes", "victory_points": 9, "bgc_placement": 4},
         ],
     },
     {
@@ -502,9 +502,9 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 23),
         "duration_minutes": 120,
         "results": [
-            {"player": "Pitufo", "leader": "", "victory_points": 12, "bgc_placement": 1},
-            {"player": "kori", "leader": "", "victory_points": 11, "bgc_placement": 2},
-            {"player": "Matute", "leader": "", "victory_points": 10, "bgc_placement": 3},
+            {"player": "Pitufo", "leader": "Piter de Vries", "victory_points": 12, "bgc_placement": 1},
+            {"player": "Kori", "leader": "Gaius Helen Mohiam", "victory_points": 11, "bgc_placement": 2},
+            {"player": "Matías", "leader": "Liet Kynes", "victory_points": 10, "bgc_placement": 3},
         ],
     },
     {
@@ -512,8 +512,8 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 24),
         "duration_minutes": 242,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 13, "bgc_placement": 1},
-            {"player": "kori", "leader": "", "victory_points": 8, "bgc_placement": 2},
+            {"player": "Matías", "leader": "Count Hasimir Fenring", "victory_points": 13, "bgc_placement": 1},
+            {"player": "Kori", "leader": "Steersman Y'Rkoon", "victory_points": 8, "bgc_placement": 2},
             {"player": "Roger", "leader": "", "victory_points": 6, "bgc_placement": 3},
         ],
     },
@@ -522,9 +522,9 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 24),
         "duration_minutes": 111,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 13, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 13, "bgc_placement": 1},
             {"player": "Roger", "leader": "", "victory_points": 6, "bgc_placement": 2},
-            {"player": "kori", "leader": "", "victory_points": 6, "bgc_placement": 3},
+            {"player": "Kori", "leader": "", "victory_points": 6, "bgc_placement": 3},
         ],
     },
     {
@@ -533,7 +533,7 @@ BGC_UPRISING_GAMES = [
         "duration_minutes": 96,
         "results": [
             {"player": "Roger", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "kori", "leader": "", "victory_points": 10, "bgc_placement": 2},
+            {"player": "Kori", "leader": "", "victory_points": 10, "bgc_placement": 2},
             {"player": "Nano", "leader": "", "victory_points": 5, "bgc_placement": 3},
         ],
     },
@@ -542,10 +542,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 3, 28),
         "duration_minutes": 144,
         "results": [
-            {"player": "kori", "leader": "", "victory_points": 12, "bgc_placement": 1},
+            {"player": "Kori", "leader": "Staban Tuek", "victory_points": 12, "bgc_placement": 1},
             {"player": "Nano", "leader": "", "victory_points": 8, "bgc_placement": 2},
             {"player": "Roger", "leader": "", "victory_points": 7, "bgc_placement": 3},
-            {"player": "Matute", "leader": "", "victory_points": 7, "bgc_placement": 4},
+            {"player": "Matías", "leader": "", "victory_points": 7, "bgc_placement": 4},
         ],
     },
     {
@@ -553,7 +553,7 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 3),
         "duration_minutes": 108,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 10, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 10, "bgc_placement": 1},
             {"player": "Roger", "leader": "", "victory_points": 9, "bgc_placement": 2},
             {"player": "Pitufo", "leader": "", "victory_points": 5, "bgc_placement": 3},
             {"player": "Nano", "leader": "", "victory_points": 5, "bgc_placement": 4},
@@ -564,9 +564,9 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 3),
         "duration_minutes": 91,
         "results": [
-            {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 1},
-            {"player": "Pitufo", "leader": "", "victory_points": 9, "bgc_placement": 2},
-            {"player": "Nano", "leader": "", "victory_points": 7, "bgc_placement": 3},
+            {"player": "Roger", "leader": "Kota Odax of Ix", "victory_points": 10, "bgc_placement": 1},
+            {"player": "Pitufo", "leader": "Chani", "victory_points": 9, "bgc_placement": 2},
+            {"player": "Nano", "leader": "Steersman Y'Rkoon", "victory_points": 7, "bgc_placement": 3},
         ],
     },
     {
@@ -576,7 +576,7 @@ BGC_UPRISING_GAMES = [
         "results": [
             {"player": "Pitufo", "leader": "", "victory_points": 12, "bgc_placement": 1},
             {"player": "Anita", "leader": "", "victory_points": 11, "bgc_placement": 2},
-            {"player": "Matute", "leader": "", "victory_points": 9, "bgc_placement": 3},
+            {"player": "Matías", "leader": "", "victory_points": 9, "bgc_placement": 3},
             {"player": "Roger", "leader": "", "victory_points": 8, "bgc_placement": 4},
         ],
     },
@@ -585,10 +585,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 4),
         "duration_minutes": 160,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Anita", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "Pitufo", "leader": "", "victory_points": 10, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 7, "bgc_placement": 4},
+            {"player": "Matías", "leader": "Staban Tuek", "victory_points": 11, "bgc_placement": 1},
+            {"player": "Anita", "leader": "Duncan Idaho", "victory_points": 10, "bgc_placement": 2},
+            {"player": "Pitufo", "leader": "Gurney Halleck", "victory_points": 10, "bgc_placement": 3},
+            {"player": "Nano", "leader": "Steersman Y'Rkoon", "victory_points": 7, "bgc_placement": 4},
         ],
     },
     {
@@ -596,9 +596,9 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 11),
         "duration_minutes": 120,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 13, "bgc_placement": 1},
-            {"player": "Pitufo", "leader": "", "victory_points": 8, "bgc_placement": 2},
-            {"player": "Nano", "leader": "", "victory_points": 6, "bgc_placement": 3},
+            {"player": "Matías", "leader": "Princess Irulan", "victory_points": 13, "bgc_placement": 1},
+            {"player": "Pitufo", "leader": "Shadam Corrino IV", "victory_points": 8, "bgc_placement": 2},
+            {"player": "Nano", "leader": "Duncan Idaho", "victory_points": 6, "bgc_placement": 3},
         ],
     },
     {
@@ -606,9 +606,9 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 11),
         "duration_minutes": 120,
         "results": [
-            {"player": "Nano", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Pitufo", "leader": "", "victory_points": 11, "bgc_placement": 2},
-            {"player": "Matute", "leader": "", "victory_points": 8, "bgc_placement": 3},
+            {"player": "Nano", "leader": "Staban Tuek", "victory_points": 11, "bgc_placement": 1},
+            {"player": "Pitufo", "leader": "Piter de Vries", "victory_points": 11, "bgc_placement": 2},
+            {"player": "Matías", "leader": "Gurney Halleck", "victory_points": 8, "bgc_placement": 3},
         ],
     },
     {
@@ -616,10 +616,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 12),
         "duration_minutes": 120,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 12, "bgc_placement": 1},
-            {"player": "Anita", "leader": "", "victory_points": 11, "bgc_placement": 2},
-            {"player": "kori", "leader": "", "victory_points": 10, "bgc_placement": 3},
-            {"player": "Pitufo", "leader": "", "victory_points": 9, "bgc_placement": 4},
+            {"player": "Matías", "leader": "Steersman Y'Rkoon", "victory_points": 12, "bgc_placement": 1},
+            {"player": "Anita", "leader": "Piter de Vries", "victory_points": 11, "bgc_placement": 2},
+            {"player": "Kori", "leader": "Gurney Halleck", "victory_points": 10, "bgc_placement": 3},
+            {"player": "Pitufo", "leader": "Kota Odax of Ix", "victory_points": 9, "bgc_placement": 4},
         ],
     },
     {
@@ -627,10 +627,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 12),
         "duration_minutes": 120,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Anita", "leader": "", "victory_points": 9, "bgc_placement": 2},
-            {"player": "Nano", "leader": "", "victory_points": 8, "bgc_placement": 3},
-            {"player": "Pitufo", "leader": "", "victory_points": 7, "bgc_placement": 4},
+            {"player": "Matías", "leader": "Kota Odax of Ix", "victory_points": 11, "bgc_placement": 1},
+            {"player": "Anita", "leader": "Staban Tuek", "victory_points": 9, "bgc_placement": 2},
+            {"player": "Nano", "leader": "Gurney Halleck", "victory_points": 8, "bgc_placement": 3},
+            {"player": "Pitufo", "leader": "Steersman Y'Rkoon", "victory_points": 7, "bgc_placement": 4},
         ],
     },
     {
@@ -638,9 +638,9 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 18),
         "duration_minutes": 120,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 12, "bgc_placement": 1},
-            {"player": "Pitufo", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "Nano", "leader": "", "victory_points": 6, "bgc_placement": 3},
+            {"player": "Matías", "leader": "Princess Irulan", "victory_points": 12, "bgc_placement": 1},
+            {"player": "Pitufo", "leader": "Duncan Idaho", "victory_points": 10, "bgc_placement": 2},
+            {"player": "Nano", "leader": "Piter de Vries", "victory_points": 6, "bgc_placement": 3},
         ],
     },
     {
@@ -648,9 +648,9 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 18),
         "duration_minutes": 120,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 15, "bgc_placement": 1},
-            {"player": "Pitufo", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "Nano", "leader": "", "victory_points": 8, "bgc_placement": 3},
+            {"player": "Matías", "leader": "Kota Odax of Ix", "victory_points": 15, "bgc_placement": 1},
+            {"player": "Pitufo", "leader": "Gaius Helen Mohiam", "victory_points": 10, "bgc_placement": 2},
+            {"player": "Nano", "leader": "Steersman Y'Rkoon", "victory_points": 8, "bgc_placement": 3},
         ],
     },
     {
@@ -658,10 +658,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 19),
         "duration_minutes": 154,
         "results": [
-            {"player": "Matute", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Anita", "leader": "", "victory_points": 11, "bgc_placement": 2},
-            {"player": "Roger", "leader": "", "victory_points": 8, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 8, "bgc_placement": 4},
+            {"player": "Matías", "leader": "Staban Tuek", "victory_points": 11, "bgc_placement": 1},
+            {"player": "Anita", "leader": "Lady Jessica", "victory_points": 11, "bgc_placement": 2},
+            {"player": "Roger", "leader": "Gurney Halleck", "victory_points": 8, "bgc_placement": 3},
+            {"player": "Nano", "leader": "Steersman Y'Rkoon", "victory_points": 8, "bgc_placement": 4},
         ],
     },
     {
@@ -669,10 +669,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 19),
         "duration_minutes": 93,
         "results": [
-            {"player": "Anita", "leader": "", "victory_points": 10, "bgc_placement": 1},
-            {"player": "Roger", "leader": "", "victory_points": 5, "bgc_placement": 2},
-            {"player": "Matute", "leader": "", "victory_points": 5, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 2, "bgc_placement": 4},
+            {"player": "Anita", "leader": "Princess Irulan", "victory_points": 10, "bgc_placement": 1},
+            {"player": "Roger", "leader": "Duncan Idaho", "victory_points": 5, "bgc_placement": 2},
+            {"player": "Matías", "leader": "Muad'Dib", "victory_points": 5, "bgc_placement": 3},
+            {"player": "Nano", "leader": "Liet Kynes", "victory_points": 2, "bgc_placement": 4},
         ],
     },
     {
@@ -680,130 +680,10 @@ BGC_UPRISING_GAMES = [
         "played_on": date(2026, 4, 19),
         "duration_minutes": 124,
         "results": [
-            {"player": "Roger", "leader": "", "victory_points": 11, "bgc_placement": 1},
+            {"player": "Roger", "leader": "Esmar Tuek", "victory_points": 11, "bgc_placement": 1},
             {"player": "Anita", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "Matute", "leader": "", "victory_points": 9, "bgc_placement": 3},
+            {"player": "Matías", "leader": "", "victory_points": 9, "bgc_placement": 3},
             {"player": "Nano", "leader": "", "victory_points": 4, "bgc_placement": 4},
-        ],
-    },
-    {
-        "import_key": "bgc-f29cf7e9-d340-4364-aed7-e76d4a42b331",
-        "played_on": date(2026, 5, 2),
-        "duration_minutes": 109,
-        "results": [
-            {"player": "kori", "leader": "", "victory_points": 10, "bgc_placement": 1},
-            {"player": "Matute", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "Nano", "leader": "", "victory_points": 6, "bgc_placement": 3},
-            {"player": "Anita", "leader": "", "victory_points": 6, "bgc_placement": 4},
-        ],
-    },
-    {
-        "import_key": "bgc-5e92c912-a7fa-4113-8a70-528df6e98830",
-        "played_on": date(2026, 5, 2),
-        "duration_minutes": 126,
-        "results": [
-            {"player": "Matute", "leader": "", "victory_points": 10, "bgc_placement": 1},
-            {"player": "Nano", "leader": "", "victory_points": 7, "bgc_placement": 2},
-            {"player": "Pitufo", "leader": "", "victory_points": 6, "bgc_placement": 3},
-            {"player": "Roger", "leader": "", "victory_points": 6, "bgc_placement": 4},
-        ],
-    },
-    {
-        "import_key": "bgc-ffafede1-42e9-4bae-bfd5-92271175bf67",
-        "played_on": date(2026, 5, 16),
-        "duration_minutes": 312,
-        "results": [
-            {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 1},
-            {"player": "kori", "leader": "", "victory_points": 9, "bgc_placement": 2},
-            {"player": "Pitufo", "leader": "", "victory_points": 8, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 6, "bgc_placement": 4},
-        ],
-    },
-    {
-        "import_key": "bgc-830cc443-0faa-4f31-bd04-82fcfe6aa8a2",
-        "played_on": date(2026, 5, 16),
-        "duration_minutes": 265,
-        "results": [
-            {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 1},
-            {"player": "kori", "leader": "", "victory_points": 7, "bgc_placement": 2},
-            {"player": "Pitufo", "leader": "", "victory_points": 6, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 3, "bgc_placement": 4},
-        ],
-    },
-    {
-        "import_key": "bgc-350e09fe-b9b3-408a-95f7-6d85c09fc8f5",
-        "played_on": date(2026, 5, 16),
-        "duration_minutes": 308,
-        "results": [
-            {"player": "Anita", "leader": "", "victory_points": 12, "bgc_placement": 1},
-            {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "Pitufo", "leader": "", "victory_points": 9, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 6, "bgc_placement": 4},
-        ],
-    },
-    {
-        "import_key": "bgc-0f383861-a3d7-4771-83f0-5e7470620d40",
-        "played_on": date(2026, 5, 25),
-        "duration_minutes": 314,
-        "results": [
-            {"player": "Anita", "leader": "", "victory_points": 12, "bgc_placement": 1},
-            {"player": "Matute", "leader": "", "victory_points": 9, "bgc_placement": 2},
-            {"player": "Roger", "leader": "", "victory_points": 8, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 8, "bgc_placement": 4},
-        ],
-    },
-    {
-        "import_key": "bgc-551cfaec-f850-49e5-980b-800a351b5d9e",
-        "played_on": date(2026, 5, 25),
-        "duration_minutes": 230,
-        "results": [
-            {"player": "Roger", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Anita", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "Matute", "leader": "", "victory_points": 7, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 7, "bgc_placement": 4},
-        ],
-    },
-    {
-        "import_key": "bgc-142e9222-1d1e-4b4a-a73b-7482aa3172f6",
-        "played_on": date(2026, 5, 30),
-        "duration_minutes": 120,
-        "results": [
-            {"player": "kori", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "Nano", "leader": "", "victory_points": 10, "bgc_placement": 3},
-            {"player": "Pitufo", "leader": "", "victory_points": 8, "bgc_placement": 4},
-        ],
-    },
-    {
-        "import_key": "bgc-73520649-1f62-48fb-a155-aec5454737ca",
-        "played_on": date(2026, 5, 30),
-        "duration_minutes": 132,
-        "results": [
-            {"player": "kori", "leader": "", "victory_points": 10, "bgc_placement": 1},
-            {"player": "Roger", "leader": "", "victory_points": 10, "bgc_placement": 2},
-            {"player": "Pitufo", "leader": "", "victory_points": 8, "bgc_placement": 3},
-            {"player": "Nano", "leader": "", "victory_points": 5, "bgc_placement": 4},
-        ],
-    },
-    {
-        "import_key": "bgc-3e2fe988-6151-4418-bc2d-46a8a464a7f7",
-        "played_on": date(2026, 5, 31),
-        "duration_minutes": 138,
-        "results": [
-            {"player": "kori", "leader": "", "victory_points": 10, "bgc_placement": 1},
-            {"player": "Roger", "leader": "", "victory_points": 9, "bgc_placement": 2},
-            {"player": "Nano", "leader": "", "victory_points": 6, "bgc_placement": 3},
-        ],
-    },
-    {
-        "import_key": "bgc-fa48c784-c52d-45ac-88ec-616a11aa6376",
-        "played_on": date(2026, 6, 6),
-        "duration_minutes": 280,
-        "results": [
-            {"player": "Anita", "leader": "", "victory_points": 11, "bgc_placement": 1},
-            {"player": "kori", "leader": "", "victory_points": 6, "bgc_placement": 2},
-            {"player": "Roger", "leader": "", "victory_points": 6, "bgc_placement": 3},
-            {"player": "Matute", "leader": "", "victory_points": 5, "bgc_placement": 4},
         ],
     },
 ]

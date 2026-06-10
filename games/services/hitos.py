@@ -4,7 +4,7 @@ League hitos: Highscore/Lowscore from max/min VP; Powerscore edited manually.
 
 from typing import Any, TypedDict
 
-from .models import GameResult, League, LeagueHito
+from games.models import GameResult, League, LeagueHito
 
 
 class HitoHolderRow(TypedDict, total=False):

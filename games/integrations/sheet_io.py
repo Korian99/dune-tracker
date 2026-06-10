@@ -14,10 +14,10 @@ from collections import defaultdict
 
 from django.db import transaction
 
-from .leaders import LEADER_NAMES
-from .models import Game, GameResult, League, resolve_player
-from .scoring import _has_highest_vp, resolve_scoring_config
-from .tiebreak import apply_tiebreak
+from games.models import Game, GameResult, League, resolve_player
+from games.services.leaders import LEADER_NAMES
+from games.services.scoring import _has_highest_vp, resolve_scoring_config
+from games.services.tiebreak import apply_tiebreak
 
 IMPORT_NOTE_PREFIX = "import_key="
 

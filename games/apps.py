@@ -8,6 +8,6 @@ class GamesConfig(AppConfig):
     def ready(self):
         from django.contrib import admin
 
-        from .admin_auth import UsernameAdminAuthenticationForm
+        from games.admin_helpers.auth import UsernameAdminAuthenticationForm
 
         admin.site.login_form = UsernameAdminAuthenticationForm

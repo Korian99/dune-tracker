@@ -15,8 +15,8 @@ from .forms import (
     _player_choice_list,
 )
 from .models import Game, GameResult, League, LeagueMembership
-from .sheet_io import export_league_sheet
-from .tiebreak import (
+from games.integrations.sheet_io import export_league_sheet
+from games.services.tiebreak import (
     apply_tiebreaks_from_post,
     game_needs_tiebreak,
     has_top_vp_tie,
@@ -25,7 +25,7 @@ from .tiebreak import (
     selected_tiebreak_for_group,
     vp_tie_groups,
 )
-from .scoring import (
+from games.services.scoring import (
     DEFAULT_SCORING_NOTES,
     league_score_rows_for_game,
     league_standings,
@@ -374,7 +374,7 @@ def game_delete(request, pk):
 
 
 def stats(request):
-    from .stats_queries import parse_stats_filter, stats_for_filter
+    from games.services.stats_queries import parse_stats_filter, stats_for_filter
 
     league_slugs, include_casual = parse_stats_filter(request)
     # Legacy single-league links: ?league=slug
@@ -425,7 +425,7 @@ def _league_fecha_numbers(league: League) -> dict[int, int]:
 
 
 def league_detail(request, slug):
-    from .hitos import league_hito_snapshots
+    from games.services.hitos import league_hito_snapshots
 
     league = get_object_or_404(League, slug=slug)
     games_sort = _league_games_sort(request)
@@ -488,7 +488,7 @@ def league_add_player(request, slug):
 @require_http_methods(["POST"])
 def league_remove_player(request, slug, player_id):
     from django.core.exceptions import ValidationError
-    from .delete_guards import ensure_league_roster_can_remove
+    from games.services.delete_guards import ensure_league_roster_can_remove
 
     league = get_object_or_404(League, slug=slug)
     membership = get_object_or_404(

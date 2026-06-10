@@ -3,9 +3,9 @@ from datetime import date
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from .models import Game, GameResult, League, resolve_player
-from .scoring import compute_league_points_breakdown
-from .tiebreak import (
+from games.models import Game, GameResult, League, resolve_player
+from games.services.scoring import compute_league_points_breakdown
+from games.services.tiebreak import (
     apply_tiebreak,
     apply_tiebreaks_from_post,
     game_needs_tiebreak,

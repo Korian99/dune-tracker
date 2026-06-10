@@ -2,8 +2,8 @@ from datetime import date
 
 from django.test import RequestFactory, TestCase
 
-from .models import Game, GameResult, League, Player, resolve_player
-from .stats_queries import (
+from games.models import Game, GameResult, League, Player, resolve_player
+from games.services.stats_queries import (
     aggregate_leader_stats,
     aggregate_player_stats,
     filter_scope_label,

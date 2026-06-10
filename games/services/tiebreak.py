@@ -10,7 +10,7 @@ placement_tiebreaks JSON per VP key (string):
 from collections import defaultdict
 from typing import Any, Literal
 
-from .models import Game, GameResult
+from games.models import Game, GameResult
 
 GroupOrder = list[int] | Literal["tie"]
 

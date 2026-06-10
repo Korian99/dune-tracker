@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
-from .admin_mixins import GuardedDeleteMixin
-from .delete_guards import (
+from games.admin_helpers.mixins import GuardedDeleteMixin
+from games.services.delete_guards import (
     LeagueMembershipInlineFormSet,
     ensure_league_can_delete,
     ensure_player_can_delete,

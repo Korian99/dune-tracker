@@ -2,9 +2,9 @@ from datetime import date
 
 from django.test import TestCase
 
-from .forms import LeagueForm
-from .hitos import ensure_default_hitos, league_hito_snapshots, powerscore_hito
-from .models import Game, GameResult, League, LeagueHito, resolve_player
+from games.forms import LeagueForm
+from games.services.hitos import ensure_default_hitos, league_hito_snapshots, powerscore_hito
+from games.models import Game, GameResult, League, LeagueHito, resolve_player
 
 
 class LeagueHitoTests(TestCase):

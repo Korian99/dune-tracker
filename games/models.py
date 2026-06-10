@@ -3,7 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 
-from .defaults import default_league_scoring_config
+from games.services.defaults import default_league_scoring_config
 
 
 class Player(models.Model):
@@ -50,7 +50,7 @@ class League(models.Model):
     scoring_config = models.JSONField(
         default=default_league_scoring_config,
         blank=True,
-        help_text="Structured scoring JSON — see games/defaults.py and games/scoring.py",
+        help_text="Structured scoring JSON — see games/services/defaults.py and games/services/scoring.py",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     players = models.ManyToManyField(
@@ -365,7 +365,7 @@ class GameResult(models.Model):
 
     @property
     def placement(self):
-        from .tiebreak import result_placement
+        from games.services.tiebreak import result_placement
 
         return result_placement(self)
 
