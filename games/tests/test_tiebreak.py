@@ -256,7 +256,15 @@ class TiebreakLogicTests(TestCase):
         self.assertEqual(by_name["Y"].placement, 1)
         self.assertEqual(by_name["Z"].placement, 2)
         self.assertEqual(by_name["X"].placement, 3)
-        self.assertEqual(game.placement_tiebreaks["10"], [by_name["Y"].pk, by_name["Z"].pk, by_name["X"].pk])
+        state = selected_tiebreak_for_group(game, vp_tie_groups(game)[0])
+        self.assertEqual(
+            state["ranks"],
+            {
+                by_name["Y"].pk: 1,
+                by_name["Z"].pk: 2,
+                by_name["X"].pk: 3,
+            },
+        )
 
     def test_apply_tiebreaks_from_post_rejects_duplicate_ranks(self):
         game = Game.objects.create(
@@ -345,15 +353,13 @@ class ResultOrderSyncTests(TestCase):
     def test_tied_first_place_shares_order(self):
         league = League.objects.create(name="Tie Order", slug="tie-order")
         game = Game.objects.create(
-            league=league, played_on=date.today(), player_count=2, tied_game=True
+            league=league, played_on=date.today(), player_count=2
         )
         ana = resolve_player("Ana", league=league)
         bob = resolve_player("Bob", league=league)
         r1 = GameResult.objects.create(game=game, player=ana, victory_points=10)
         r2 = GameResult.objects.create(game=game, player=bob, victory_points=10)
-        from games.services.tiebreak import sync_result_orders_for_game
-
-        sync_result_orders_for_game(game)
+        apply_tiebreak(game, "tie", vp=10)
         r1.refresh_from_db()
         r2.refresh_from_db()
         self.assertEqual(r1.order, 1)
@@ -483,7 +489,7 @@ class TiebreakRedirectTests(TestCase):
         self.assertTrue(r2.is_winner)
 
     def test_imported_style_tie_redirects_after_edit_save(self):
-        """Backfilled designated_winner still goes to tiebreak on edit+save."""
+        """Backfilled placement orders still go to tiebreak on edit+save."""
         league = League.objects.create(name="Imp", slug="imp-l")
         game = Game.objects.create(
             league=league, played_on=date.today(), player_count=2
@@ -492,8 +498,7 @@ class TiebreakRedirectTests(TestCase):
         bob = resolve_player("Bob", league=league)
         r1 = GameResult.objects.create(game=game, player=ana, victory_points=10)
         r2 = GameResult.objects.create(game=game, player=bob, victory_points=10)
-        game.designated_winner = r1
-        game.save(update_fields=["designated_winner"])
+        apply_tiebreak(game, "winner", str(r1.pk))
         self.assertFalse(game_needs_tiebreak(game))
         self.assertTrue(has_top_vp_tie(game))
 

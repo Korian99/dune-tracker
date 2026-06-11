@@ -115,17 +115,8 @@ def _config_system(config: dict[str, Any]) -> str:
 
 def _winner_pk_for_game(game, game_results: list[GameResult]) -> int | None:
     """Winner pk without extra queries when game_results are already loaded."""
-    if game.tied_game:
-        return None
-    if game.designated_winner_id:
-        return game.designated_winner_id
-    if not game_results:
-        return None
-    max_vp = max(r.victory_points for r in game_results)
-    leaders = [r for r in game_results if r.victory_points == max_vp]
-    if len(leaders) == 1:
-        return leaders[0].pk
-    return None
+    winner = game.resolved_winner()
+    return winner.pk if winner else None
 
 
 def build_game_scoring_context(results) -> dict[int, dict[str, Any]]:
@@ -321,7 +312,7 @@ def league_standings(league: League, results=None):
     if results is None:
         results = list(
             GameResult.objects.filter(game__league=league).select_related(
-                "game", "player", "game__designated_winner"
+                "game", "player"
             )
         )
     else:

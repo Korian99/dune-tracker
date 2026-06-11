@@ -184,7 +184,6 @@ def import_from_worker(
 
     game_count = 0
     result_count = 0
-    designated_updates: list[tuple[int, int | None]] = []
 
     all_games: list[dict[str, Any]] = []
     for detail in league_details:
@@ -202,12 +201,9 @@ def import_from_worker(
             rounds=game_row.get("rounds"),
             duration_minutes=game_row.get("duration_minutes"),
             notes=game_row.get("notes") or "",
-            tied_game=bool(game_row.get("tied_game")),
-            placement_tiebreaks=game_row.get("placement_tiebreaks") or {},
             created_at=parse_worker_datetime(game_row.get("created_at", "")),
         )
         game_count += 1
-        designated_updates.append((game.pk, game_row.get("designated_winner_id")))
 
         for result_row in game_row.get("results", []):
             GameResult.objects.create(
@@ -224,12 +220,6 @@ def import_from_worker(
                 order=int(result_row.get("order") or 0),
             )
             result_count += 1
-
-    for game_id, winner_result_id in designated_updates:
-        if winner_result_id:
-            Game.objects.filter(pk=game_id).update(
-                designated_winner_id=winner_result_id
-            )
 
     max_ids = {
         Player: max((p["id"] for p in players), default=0),

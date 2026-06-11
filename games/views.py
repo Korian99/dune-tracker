@@ -113,9 +113,7 @@ def _return_sort_from_request(request) -> str:
 
 
 def _league_games_queryset(league: League, games_sort: str):
-    games = league.games.select_related("designated_winner__player").prefetch_related(
-        "results__player"
-    )
+    games = league.games.prefetch_related("results__player")
     if games_sort == "oldest":
         return games.order_by("played_on", "created_at")
     return games.order_by("-played_on", "-created_at")
@@ -163,9 +161,7 @@ def _redirect_after_game_save(game, request):
 
 
 def _games_queryset(league_slug=None):
-    qs = Game.objects.select_related(
-        "league", "designated_winner__player"
-    ).prefetch_related("results__player")
+    qs = Game.objects.select_related("league").prefetch_related("results__player")
     if league_slug:
         qs = qs.filter(league__slug=league_slug)
     return qs
@@ -217,9 +213,7 @@ def game_list(request):
 
 def game_detail(request, pk):
     game = get_object_or_404(
-        Game.objects.select_related(
-            "league", "designated_winner__player"
-        ).prefetch_related("results__player"),
+        Game.objects.select_related("league").prefetch_related("results__player"),
         pk=pk,
     )
     alliance_map = _alliance_map_for_game(game)
@@ -372,7 +366,7 @@ def game_edit(request, pk):
 @require_http_methods(["GET", "POST"])
 def game_resolve_tie(request, pk):
     game = get_object_or_404(
-        Game.objects.select_related("league", "designated_winner__player").prefetch_related(
+        Game.objects.select_related("league").prefetch_related(
             "results__player"
         ),
         pk=pk,

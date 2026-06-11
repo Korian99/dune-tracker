@@ -4,11 +4,18 @@ from django.db import migrations
 
 
 def create_liga_n0_and_import_bgc(apps, schema_editor):
+    from django.apps import apps as django_apps
+
     from games.data.bgc_uprising import BGC_UPRISING_GAMES
     from games.integrations.sheet_io import import_games_for_league
     from games.models import League
     from games.services.defaults import DEFAULT_LEAGUE_SCORING_NOTES, default_league_scoring_config
     from games.services.hitos import ensure_default_hitos
+
+    if apps is None:
+        apps = django_apps
+    GameModel = apps.get_model("games", "Game")
+    GameResultModel = apps.get_model("games", "GameResult")
 
     league, _created = League.objects.get_or_create(
         slug="liga-n0",
@@ -23,7 +30,12 @@ def create_liga_n0_and_import_bgc(apps, schema_editor):
         },
     )
     ensure_default_hitos(league)
-    import_games_for_league(league, BGC_UPRISING_GAMES)
+    import_games_for_league(
+        league,
+        BGC_UPRISING_GAMES,
+        game_model=GameModel,
+        game_result_model=GameResultModel,
+    )
 
 
 def noop_reverse(apps, schema_editor):

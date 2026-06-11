@@ -50,7 +50,7 @@ def filter_scope_label(league_slugs: list[str], include_casual: bool) -> str:
 def results_for_games(games_qs):
     """Load result rows for stats; placement comes from synced order field."""
     return GameResult.objects.filter(game__in=games_qs).select_related(
-        "game", "player", "game__league", "game__designated_winner"
+        "game", "player", "game__league"
     )
 
 

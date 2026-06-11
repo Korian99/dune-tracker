@@ -1,10 +1,9 @@
 """
 VP tie detection, resolution, and placement ranks for games.
 
-placement_tiebreaks JSON per VP key (string):
-  - "tie" — all players in the group share the same competition rank
-  - int or numeric string — legacy: one winner, others share next rank
-  - [pk, pk, ...] — full order within the group (1st → last among tied VP)
+Tie resolution is stored on ``GameResult.order`` (competition placement).
+Unresolved players in a VP tie group have ``order=0`` until the desempate
+form assigns placements.
 """
 
 from collections import defaultdict
@@ -63,116 +62,83 @@ def _group_result_pks(group: list[GameResult]) -> set[int]:
     return {r.pk for r in group}
 
 
-def _parse_stored_order(raw: Any, group_pks: set[int]) -> GroupOrder | None:
-    """Return ordered pks, 'tie', or None (unresolved / legacy winner int)."""
-    if raw is None:
+def _group_orders(group: list[GameResult]) -> dict[int, int]:
+    return {r.pk: r.order for r in group}
+
+
+def _group_has_unresolved_order(group: list[GameResult]) -> bool:
+    return any(r.order < 1 for r in group)
+
+
+def _orders_are_tie(orders: dict[int, int]) -> bool:
+    values = list(orders.values())
+    return len(values) >= 2 and len(set(values)) == 1 and values[0] >= 1
+
+
+def _orders_are_full_rank(orders: dict[int, int]) -> bool:
+    if any(o < 1 for o in orders.values()):
+        return False
+    values = sorted(orders.values())
+    if len(values) != len(set(values)):
+        return False
+    return values[-1] - values[0] == len(values) - 1
+
+
+def _orders_are_legacy_winner(orders: dict[int, int]) -> bool:
+    """One player at min order, all others share the next rank."""
+    if any(o < 1 for o in orders.values()):
+        return False
+    values = sorted(orders.values())
+    min_order = values[0]
+    winners = [o for o in values if o == min_order]
+    if len(winners) != 1:
+        return False
+    rest = [o for o in values if o != min_order]
+    return bool(rest) and len(set(rest)) == 1 and rest[0] == min_order + 1
+
+
+def _resolutions_from_orders(group: list[GameResult]) -> GroupOrder | None:
+    """Derive tie resolution from stored orders, or None if unresolved."""
+    if _group_has_unresolved_order(group):
         return None
-    if raw == "tie":
+    orders = _group_orders(group)
+    if _orders_are_tie(orders):
         return "tie"
-    if isinstance(raw, list):
-        try:
-            pks = [int(x) for x in raw]
-        except (TypeError, ValueError):
-            return None
-        if len(pks) == len(group_pks) and set(pks) == group_pks:
-            return pks
+    if _orders_are_full_rank(orders):
+        return sorted(orders.keys(), key=lambda pk: orders[pk])
+    if _orders_are_legacy_winner(orders):
         return None
-    try:
-        winner_pk = int(raw)
-    except (TypeError, ValueError):
-        return None
-    if winner_pk not in group_pks:
-        return None
-    return None  # legacy int handled separately
-
-
-def _group_placement_order(
-    game: Game, vp: int, group: list[GameResult]
-) -> GroupOrder | None:
-    """
-    Return full pk order (best → worst within group), 'tie', or None if unresolved.
-    Legacy winner-only: None (placements_for_game applies winner + shared rank).
-    """
-    group_pks = _group_result_pks(group)
-    max_vp = _game_max_vp(game)
-
-    tiebreaks = game.placement_tiebreaks or {}
-    raw = tiebreaks.get(str(vp))
-
-    if vp == max_vp:
-        if game.tied_game:
-            return "tie"
-        parsed = _parse_stored_order(raw, group_pks)
-        if parsed is not None:
-            return parsed
-        if game.designated_winner_id and game.designated_winner_id in group_pks:
-            return None  # legacy winner-only
-        return None
-
-    parsed = _parse_stored_order(raw, group_pks)
-    if parsed is not None:
-        return parsed
     return None
 
 
-def _group_is_legacy_winner(game: Game, vp: int, group: list[GameResult]) -> bool:
-    """True when only a single winner is stored (others share next rank)."""
-    group_pks = _group_result_pks(group)
-    max_vp = _game_max_vp(game)
-    tiebreaks = game.placement_tiebreaks or {}
-    raw = tiebreaks.get(str(vp))
-
-    if vp == max_vp:
-        if game.tied_game:
-            return False
-        if isinstance(raw, list):
-            return False
-        if raw == "tie":
-            return False
-        return bool(
-            game.designated_winner_id
-            and game.designated_winner_id in group_pks
-            and not isinstance(raw, list)
-        )
-
-    if isinstance(raw, list) or raw == "tie" or raw is None:
-        return False
-    try:
-        pk = int(raw)
-    except (TypeError, ValueError):
-        return False
-    return pk in group_pks
+def _group_is_legacy_winner(group: list[GameResult]) -> bool:
+    return _orders_are_legacy_winner(_group_orders(group))
 
 
-def _legacy_winner_pk(game: Game, vp: int, group: list[GameResult]) -> int | None:
-    group_pks = _group_result_pks(group)
-    max_vp = _game_max_vp(game)
-    if vp == max_vp and game.designated_winner_id in group_pks:
-        return game.designated_winner_id
-    raw = (game.placement_tiebreaks or {}).get(str(vp))
-    if raw is None or raw == "tie" or isinstance(raw, list):
+def _legacy_winner_pk(group: list[GameResult]) -> int | None:
+    if not _group_is_legacy_winner(group):
         return None
-    try:
-        pk = int(raw)
-    except (TypeError, ValueError):
-        return None
-    return pk if pk in group_pks else None
+    orders = _group_orders(group)
+    min_order = min(orders.values())
+    for pk, order in orders.items():
+        if order == min_order:
+            return pk
+    return None
 
 
 def vp_group_is_resolved(game: Game, group: dict) -> bool:
-    """True when this VP tie has a stored resolution."""
-    vp = group["vp"]
+    """True when this VP tie has valid stored orders."""
     results = group["results"]
-    order = _group_placement_order(game, vp, results)
+    if _group_has_unresolved_order(results):
+        return False
+    order = _resolutions_from_orders(results)
     if order is not None:
         return True
-    if _group_is_legacy_winner(game, vp, results):
-        return True
-    return False
+    return _group_is_legacy_winner(results)
 
 
 def game_needs_tiebreak(game: Game) -> bool:
-    """True when any VP tie group lacks a resolution."""
+    """True when any VP tie group lacks a valid resolution."""
     return any(not vp_group_is_resolved(game, g) for g in vp_tie_groups(game))
 
 
@@ -181,6 +147,9 @@ def placements_for_game(game: Game) -> dict[int, int]:
     results = list(game.results.all())
     if not results:
         return {}
+
+    if game_orders_are_synced(game):
+        return {r.pk: r.order for r in results}
 
     by_vp: dict[int, list[GameResult]] = defaultdict(list)
     for result in results:
@@ -196,7 +165,7 @@ def placements_for_game(game: Game) -> dict[int, int]:
             rank += 1
             continue
 
-        order = _group_placement_order(game, vp, group)
+        order = _resolutions_from_orders(group)
         if order == "tie":
             for result in group:
                 placements[result.pk] = rank
@@ -209,8 +178,8 @@ def placements_for_game(game: Game) -> dict[int, int]:
                 rank += 1
             continue
 
-        if _group_is_legacy_winner(game, vp, group):
-            winner_pk = _legacy_winner_pk(game, vp, group)
+        if _group_is_legacy_winner(group):
+            winner_pk = _legacy_winner_pk(group)
             if winner_pk is not None:
                 placements[winner_pk] = rank
                 rank += 1
@@ -234,12 +203,23 @@ def result_placement(result: GameResult) -> int:
 
 
 def sync_result_orders_for_game(game: Game) -> None:
-    """Write competition placement (1–4) onto each result's order field."""
+    """Write competition placement onto each result's order field."""
     placements = placements_for_game(game)
     if not placements:
         return
+
+    tie_group_pks: set[int] = set()
+    for group in vp_tie_groups(game):
+        if _group_has_unresolved_order(group["results"]):
+            tie_group_pks.update(r.pk for r in group["results"])
+
     to_update: list[GameResult] = []
     for result in game.results.all():
+        if result.pk in tie_group_pks:
+            if result.order != 0:
+                result.order = 0
+                to_update.append(result)
+            continue
         placement = placements.get(result.pk, 1)
         if result.order != placement:
             result.order = placement
@@ -249,9 +229,11 @@ def sync_result_orders_for_game(game: Game) -> None:
 
 
 def game_orders_are_synced(game: Game) -> bool:
-    """True when every result row has order set to competition placement."""
+    """True when every result has a valid synced competition placement."""
     results = list(game.results.all())
-    return bool(results) and all(r.order >= 1 for r in results)
+    if not results or any(r.order < 1 for r in results):
+        return False
+    return not game_needs_tiebreak(game)
 
 
 def build_placement_cache(results) -> dict[int, int]:
@@ -260,78 +242,44 @@ def build_placement_cache(results) -> dict[int, int]:
         return {}
     results_list = list(results) if not isinstance(results, list) else results
     if all(r.order >= 1 for r in results_list):
-        return {r.pk: r.order for r in results_list}
+        by_game: dict[int, list[GameResult]] = defaultdict(list)
+        for result in results_list:
+            by_game[result.game_id].append(result)
+        placements: dict[int, int] = {}
+        for game_results in by_game.values():
+            game = game_results[0].game
+            if game_orders_are_synced(game):
+                for result in game_results:
+                    placements[result.pk] = result.order
+            else:
+                placements.update(placements_for_game(game))
+        return placements
 
-    by_game: dict[int, list[GameResult]] = defaultdict(list)
+    by_game = defaultdict(list)
     for result in results_list:
         by_game[result.game_id].append(result)
 
-    placements: dict[int, int] = {}
+    placements = {}
     for game_results in by_game.values():
-        if all(r.order >= 1 for r in game_results):
-            for result in game_results:
-                placements[result.pk] = result.order
-        else:
-            placements.update(placements_for_game(game_results[0].game))
+        placements.update(placements_for_game(game_results[0].game))
     return placements
 
 
 def normalize_tiebreaks_after_save(game: Game) -> None:
-    """Drop tiebreak data that no longer matches saved scores."""
+    """Reset unresolved tie-group orders and re-sync the rest."""
     groups = vp_tie_groups(game)
-    group_vps = {g["vp"] for g in groups}
-    max_vp = _game_max_vp(game)
-    leaders = game.max_vp_results()
-    leader_ids = {r.pk for r in leaders}
-    update_fields: list[str] = []
+    unresolved_pks: set[int] = set()
+    for group in groups:
+        if not vp_group_is_resolved(game, group):
+            unresolved_pks.update(r.pk for r in group["results"])
 
-    tiebreaks = dict(game.placement_tiebreaks or {})
-    cleaned: dict[str, Any] = {}
-    for key, raw in tiebreaks.items():
-        try:
-            vp = int(key)
-        except (TypeError, ValueError):
-            continue
-        if vp not in group_vps:
-            continue
-        group = next(g for g in groups if g["vp"] == vp)
-        group_pks = _group_result_pks(group["results"])
-        if raw == "tie":
-            cleaned[key] = "tie"
-            continue
-        if isinstance(raw, list):
-            try:
-                pks = [int(x) for x in raw]
-            except (TypeError, ValueError):
-                continue
-            if set(pks) == group_pks and len(pks) == len(group_pks):
-                cleaned[key] = pks
-            continue
-        try:
-            pk = int(raw)
-        except (TypeError, ValueError):
-            continue
-        if pk in group_pks:
-            if vp == max_vp:
-                continue  # max VP uses designated_winner for legacy int
-            cleaned[key] = pk
-
-    if cleaned != tiebreaks:
-        game.placement_tiebreaks = cleaned
-        update_fields.append("placement_tiebreaks")
-
-    if len(leaders) <= 1:
-        if game.tied_game or game.designated_winner_id:
-            game.tied_game = False
-            game.designated_winner = None
-            update_fields.extend(["tied_game", "designated_winner"])
-    elif game.designated_winner_id and game.designated_winner_id not in leader_ids:
-        game.designated_winner = None
-        game.tied_game = False
-        update_fields.extend(["tied_game", "designated_winner"])
-
-    if update_fields:
-        game.save(update_fields=list(dict.fromkeys(update_fields)))
+    to_update: list[GameResult] = []
+    for result in game.results.all():
+        if result.pk in unresolved_pks and result.order != 0:
+            result.order = 0
+            to_update.append(result)
+    if to_update:
+        GameResult.objects.bulk_update(to_update, ["order"])
 
     sync_result_orders_for_game(game)
 
@@ -339,6 +287,54 @@ def normalize_tiebreaks_after_save(game: Game) -> None:
 def normalize_winner_after_save(game: Game) -> None:
     """Backward-compatible alias."""
     normalize_tiebreaks_after_save(game)
+
+
+def _apply_group_placements(
+    placements: dict[int, int],
+    group: list[GameResult],
+    resolution: str,
+    *,
+    winner_pk: int | None = None,
+    order_pks: list[int] | None = None,
+    start_rank: int,
+) -> int:
+    """Update placements dict for one VP group; return next rank."""
+    group_pks = _group_result_pks(group)
+    if resolution == "tie":
+        for pk in group_pks:
+            placements[pk] = start_rank
+        return start_rank + len(group)
+
+    if resolution == "rank":
+        if not order_pks:
+            raise ValueError("Indica el puesto de cada jugador en el grupo.")
+        if set(order_pks) != group_pks or len(order_pks) != len(group_pks):
+            raise ValueError("Cada jugador del empate debe tener un puesto distinto.")
+        rank = start_rank
+        for pk in order_pks:
+            placements[pk] = rank
+            rank += 1
+        return rank
+
+    if resolution != "winner" or winner_pk is None:
+        raise ValueError(
+            "Elige el puesto de cada jugador o marca «Empate (mismo puesto)»."
+        )
+    if winner_pk not in group_pks:
+        raise ValueError("El jugador debe ser uno de los empatados en ese grupo.")
+
+    placements[winner_pk] = start_rank
+    rank = start_rank + 1
+    if len(group) == 2:
+        for pk in group_pks:
+            if pk != winner_pk:
+                placements[pk] = rank
+        return rank + 1
+
+    for pk in group_pks:
+        if pk != winner_pk:
+            placements[pk] = rank
+    return rank + 1
 
 
 def apply_tiebreak(
@@ -359,75 +355,90 @@ def apply_tiebreak(
     if group is None:
         raise ValueError("No hay empate en ese nivel de PV.")
 
-    result_ids = _group_result_pks(group["results"])
-    tiebreaks = dict(game.placement_tiebreaks or {})
-
-    if resolution == "tie":
-        if target_vp == max_vp:
-            game.tied_game = True
-            game.designated_winner = None
-            tiebreaks.pop(str(target_vp), None)
-            game.placement_tiebreaks = tiebreaks
-            game.save(
-                update_fields=["tied_game", "designated_winner", "placement_tiebreaks"]
+    winner_pk: int | None = None
+    if resolution == "winner":
+        if not winner_result_id:
+            raise ValueError(
+                "Elige el puesto de cada jugador o marca «Empate (mismo puesto)»."
             )
-        else:
-            tiebreaks[str(target_vp)] = "tie"
-            game.placement_tiebreaks = tiebreaks
-            game.save(update_fields=["placement_tiebreaks"])
-        sync_result_orders_for_game(game)
-        return
+        try:
+            winner_pk = int(winner_result_id)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Jugador no válido.") from exc
 
-    if resolution == "rank":
-        if not order_result_ids:
-            raise ValueError("Indica el puesto de cada jugador en el grupo.")
-        if set(order_result_ids) != result_ids:
-            raise ValueError("Cada jugador del empate debe tener un puesto distinto.")
-        if len(order_result_ids) != len(result_ids):
-            raise ValueError("Faltan jugadores en el orden del empate.")
-        tiebreaks[str(target_vp)] = order_result_ids
-        game.placement_tiebreaks = tiebreaks
-        if target_vp == max_vp:
-            game.tied_game = False
-            game.designated_winner_id = order_result_ids[0]
-            game.save(
-                update_fields=[
-                    "placement_tiebreaks",
-                    "tied_game",
-                    "designated_winner",
-                ]
+    placements = placements_for_game(game)
+    by_vp: dict[int, list[GameResult]] = defaultdict(list)
+    for result in game.results.all():
+        by_vp[result.victory_points].append(result)
+
+    tie_group_pks: set[int] = set()
+    resolved_tie_pks: set[int] = set()
+    rank = 1
+    for vp_level in sorted(by_vp.keys(), reverse=True):
+        vp_group = by_vp[vp_level]
+        if len(vp_group) == 1:
+            placements[vp_group[0].pk] = rank
+            rank += 1
+            continue
+
+        tie_group_pks.update(r.pk for r in vp_group)
+
+        if vp_level == target_vp:
+            rank = _apply_group_placements(
+                placements,
+                vp_group,
+                resolution,
+                winner_pk=winner_pk,
+                order_pks=order_result_ids,
+                start_rank=rank,
             )
+            resolved_tie_pks.update(r.pk for r in vp_group)
+            continue
+
+        stored = _resolutions_from_orders(vp_group)
+        if stored == "tie":
+            for result in vp_group:
+                placements[result.pk] = rank
+            rank += len(vp_group)
+            resolved_tie_pks.update(r.pk for r in vp_group)
+        elif isinstance(stored, list):
+            for pk in stored:
+                placements[pk] = rank
+                rank += 1
+            resolved_tie_pks.update(r.pk for r in vp_group)
+        elif _group_is_legacy_winner(vp_group):
+            wpk = _legacy_winner_pk(vp_group)
+            if wpk is not None:
+                placements[wpk] = rank
+                rank += 1
+                for result in vp_group:
+                    if result.pk != wpk:
+                        placements[result.pk] = rank
+                rank += 1
+                resolved_tie_pks.update(r.pk for r in vp_group)
+            else:
+                rank += len(vp_group)
+        elif _group_has_unresolved_order(vp_group):
+            rank += len(vp_group)
         else:
-            game.save(update_fields=["placement_tiebreaks"])
-        sync_result_orders_for_game(game)
-        return
+            for result in vp_group:
+                placements[result.pk] = rank
+            rank += len(vp_group)
+            resolved_tie_pks.update(r.pk for r in vp_group)
 
-    if resolution != "winner" or not winner_result_id:
-        raise ValueError(
-            "Elige el puesto de cada jugador o marca «Empate (mismo puesto)»."
-        )
-
-    try:
-        winner_pk = int(winner_result_id)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("Jugador no válido.") from exc
-
-    if winner_pk not in result_ids:
-        raise ValueError("El jugador debe ser uno de los empatados en ese grupo.")
-
-    if target_vp == max_vp:
-        game.tied_game = False
-        game.designated_winner_id = winner_pk
-        tiebreaks.pop(str(target_vp), None)
-        game.placement_tiebreaks = tiebreaks
-        game.save(
-            update_fields=["tied_game", "designated_winner", "placement_tiebreaks"]
-        )
-    else:
-        tiebreaks[str(target_vp)] = winner_pk
-        game.placement_tiebreaks = tiebreaks
-        game.save(update_fields=["placement_tiebreaks"])
-    sync_result_orders_for_game(game)
+    to_update: list[GameResult] = []
+    for result in game.results.all():
+        if result.pk in tie_group_pks and result.pk not in resolved_tie_pks:
+            if result.order != 0:
+                result.order = 0
+                to_update.append(result)
+            continue
+        placement = placements.get(result.pk, 1)
+        if result.order != placement:
+            result.order = placement
+            to_update.append(result)
+    if to_update:
+        GameResult.objects.bulk_update(to_update, ["order"])
 
 
 def apply_tiebreaks_from_post(game: Game, post) -> None:
@@ -482,11 +493,9 @@ def apply_tiebreaks_from_post(game: Game, post) -> None:
 
 def selected_tiebreak_for_group(game: Game, group: dict) -> dict:
     """UI state for one tie group."""
-    vp = group["vp"]
     results = group["results"]
-    group_pks = _group_result_pks(results)
 
-    order = _group_placement_order(game, vp, results)
+    order = _resolutions_from_orders(results)
     if order == "tie":
         return {"resolution": "tie", "winner_pk": None, "ranks": {}}
 
@@ -494,8 +503,8 @@ def selected_tiebreak_for_group(game: Game, group: dict) -> dict:
         ranks = {pk: index + 1 for index, pk in enumerate(order)}
         return {"resolution": "rank", "winner_pk": order[0], "ranks": ranks}
 
-    if _group_is_legacy_winner(game, vp, results):
-        winner_pk = _legacy_winner_pk(game, vp, results)
+    if _group_is_legacy_winner(results):
+        winner_pk = _legacy_winner_pk(results)
         ranks = {}
         if winner_pk is not None:
             ranks[winner_pk] = 1

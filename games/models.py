@@ -232,22 +232,6 @@ class Game(models.Model):
         help_text="Total table time in minutes",
     )
     notes = models.TextField(blank=True)
-    tied_game = models.BooleanField(
-        default=False,
-        help_text="No single winner (VP tie acknowledged)",
-    )
-    designated_winner = models.ForeignKey(
-        "GameResult",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="designated_win_for_game",
-    )
-    placement_tiebreaks = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text="Per-VP tiebreak: VP string -> 'tie', ordered [result pk, ...], or legacy winner pk",
-    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -264,15 +248,29 @@ class Game(models.Model):
         max_vp = max(r.victory_points for r in results)
         return [r for r in results if r.victory_points == max_vp]
 
+    @property
+    def tied_game(self) -> bool:
+        """True when top-VP leaders share the same competition placement."""
+        leaders = self.max_vp_results()
+        if len(leaders) < 2:
+            return False
+        orders = [r.order for r in leaders if r.order >= 1]
+        return len(orders) == len(leaders) and len(set(orders)) == 1
+
     def resolved_winner(self):
         """Single winner, or None if tie / unresolved multi-way tie."""
         if self.tied_game:
             return None
-        if self.designated_winner_id:
-            return self.designated_winner
         leaders = self.max_vp_results()
         if len(leaders) == 1:
             return leaders[0]
+        if len(leaders) >= 2:
+            ranked = sorted(
+                (r for r in leaders if r.order >= 1),
+                key=lambda r: r.order,
+            )
+            if len(ranked) >= 2 and ranked[0].order < ranked[1].order:
+                return ranked[0]
         return None
 
     @property

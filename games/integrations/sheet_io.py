@@ -138,10 +138,17 @@ def import_games_for_league(
     games_data: Iterable[dict[str, Any]],
     *,
     dry_run: bool = False,
+    game_model=None,
+    game_result_model=None,
 ) -> tuple[int, int]:
     """
     Create games from structured dicts. Returns (created, skipped).
+
+    Pass ``game_model`` / ``game_result_model`` from ``apps.get_model`` when
+    calling from migrations so inserts match the schema at that point.
     """
+    GameCls = game_model or Game
+    GameResultCls = game_result_model or GameResult
     created = 0
     skipped = 0
     for game_data in games_data:
@@ -153,30 +160,41 @@ def import_games_for_league(
             created += 1
             continue
 
-        game = Game.objects.create(
-            league=league,
-            played_on=game_data["played_on"],
-            base_game=Game.BaseGame.UPRISING,
-            bloodlines=True,
-            player_count=len(game_data["results"]),
-            rounds=game_data.get("rounds"),
-            duration_minutes=game_data.get("duration_minutes"),
-            notes=import_note_key(import_key),
-        )
+        game_kwargs: dict[str, Any] = {
+            "league_id": league.pk,
+            "played_on": game_data["played_on"],
+            "base_game": "uprising",
+            "bloodlines": True,
+            "player_count": len(game_data["results"]),
+            "rounds": game_data.get("rounds"),
+            "duration_minutes": game_data.get("duration_minutes"),
+            "notes": import_note_key(import_key),
+        }
+        if hasattr(GameCls, "_meta") and any(
+            f.name == "tied_game" for f in GameCls._meta.get_fields()
+        ):
+            game_kwargs["tied_game"] = False
+            game_kwargs["placement_tiebreaks"] = {}
+        game = GameCls.objects.create(**game_kwargs)
         for raw in game_data["results"]:
             row = _normalize_result_row(raw)
             player = resolve_player(row["player"], league=league)
-            GameResult.objects.create(
-                game=game,
-                player=player,
-                leader=row["leader"],
-                victory_points=row["victory_points"],
-                sardaukar_count=row["sardaukar_count"],
-                alliance_emperor=row["alliance_emperor"],
-                alliance_guild=row["alliance_guild"],
-                alliance_bene_gesserit=row["alliance_bene_gesserit"],
-                alliance_fremen=row["alliance_fremen"],
-            )
+            result_kwargs: dict[str, Any] = {
+                "game_id": game.pk,
+                "player_id": player.pk,
+                "leader": row["leader"],
+                "victory_points": row["victory_points"],
+                "sardaukar_count": row["sardaukar_count"],
+                "alliance_emperor": row["alliance_emperor"],
+                "alliance_guild": row["alliance_guild"],
+                "alliance_bene_gesserit": row["alliance_bene_gesserit"],
+                "alliance_fremen": row["alliance_fremen"],
+            }
+            if hasattr(GameResultCls, "_meta") and any(
+                f.name == "order" for f in GameResultCls._meta.get_fields()
+            ):
+                result_kwargs["order"] = 0
+            GameResultCls.objects.create(**result_kwargs)
         if any(r.get("bgc_placement") is not None for r in game_data["results"]):
             apply_bgc_placements(game, game_data["results"])
         from games.services.tiebreak import sync_result_orders_for_game

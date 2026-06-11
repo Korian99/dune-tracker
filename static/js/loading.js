@@ -55,6 +55,8 @@
     if (!(form instanceof HTMLFormElement)) return;
     if (form.dataset.noLoading !== undefined) return;
     if (form.target && form.target !== "_self") return;
+    // Client-side validation (e.g. desempate form) may preventDefault on the same event.
+    if (event.defaultPrevented) return;
     clearTimeout(showTimer);
     revealLoading();
   });

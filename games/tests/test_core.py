@@ -393,23 +393,22 @@ class GameWinnerTests(TestCase):
         )
 
     def test_vp_tie_without_designation_has_no_winner(self):
-        self.game.designated_winner = None
-        self.game.tied_game = False
-        self.game.save()
         self.assertIsNone(self.game.resolved_winner())
         self.assertFalse(self.r_ana.is_winner)
         self.assertFalse(self.r_bob.is_winner)
 
     def test_designated_winner_breaks_tie(self):
-        self.game.designated_winner = self.r_bob
-        self.game.save()
+        self.r_bob.order = 1
+        self.r_ana.order = 2
+        GameResult.objects.bulk_update([self.r_ana, self.r_bob], ["order"])
         self.assertFalse(self.r_ana.is_winner)
         self.assertTrue(self.r_bob.is_winner)
 
     def test_designated_winner_gets_first_place_scoring(self):
         self.game.rounds = 5
-        self.game.designated_winner = self.r_bob
-        self.game.save()
+        self.r_bob.order = 1
+        self.r_ana.order = 2
+        GameResult.objects.bulk_update([self.r_ana, self.r_bob], ["order"])
         self.assertEqual(self.r_bob.placement, 1)
         self.assertEqual(self.r_ana.placement, 2)
         bob_pts = compute_league_points_breakdown(self.r_bob, self.league)
@@ -426,9 +425,10 @@ class GameWinnerTests(TestCase):
         self.assertEqual(ana_pts["placement_points"], 5)
 
     def test_tied_game_flag(self):
-        self.game.tied_game = True
-        self.game.designated_winner = None
-        self.game.save()
+        self.r_ana.order = 1
+        self.r_bob.order = 1
+        GameResult.objects.bulk_update([self.r_ana, self.r_bob], ["order"])
+        self.assertTrue(self.game.tied_game)
         self.assertIsNone(self.game.resolved_winner())
         self.assertIn("Empate", self.game.winner_summary)
 
