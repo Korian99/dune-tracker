@@ -933,8 +933,13 @@ h2 {
 
 .stats-filter-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 1.25rem;
+}
+
+.stats-filter-group--players {
+  max-height: 16rem;
+  overflow-y: auto;
 }
 
 .stats-filter-group {

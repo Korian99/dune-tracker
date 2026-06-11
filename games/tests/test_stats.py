@@ -84,6 +84,56 @@ class StatsQueriesTests(TestCase):
         self.assertEqual(leaders["Muad'Dib"]["placement_3"], 0)
         self.assertEqual(leaders["Muad'Dib"]["placement_4"], 0)
 
+    def test_leader_stats_filtered_by_player(self):
+        g = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g, player=self.player_a, leader="Muad'Dib", victory_points=10, order=0
+        )
+        GameResult.objects.create(
+            game=g, player=self.player_b, leader="Chani", victory_points=5, order=1
+        )
+        g2 = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g2, player=self.player_a, leader="Chani", victory_points=12, order=0
+        )
+        GameResult.objects.create(
+            game=g2, player=self.player_b, leader="Muad'Dib", victory_points=8, order=1
+        )
+        all_results = GameResult.objects.filter(game__league=self.league)
+        all_leaders = {r["leader"]: r for r in aggregate_leader_stats(all_results)}
+        ana_results = all_results.filter(player=self.player_a)
+        ana_leaders = {r["leader"]: r for r in aggregate_leader_stats(ana_results)}
+        self.assertEqual(all_leaders["Muad'Dib"]["times_played"], 2)
+        self.assertEqual(ana_leaders["Muad'Dib"]["times_played"], 1)
+        self.assertEqual(ana_leaders["Chani"]["times_played"], 1)
+        self.assertEqual(ana_leaders["Chani"]["wins"], 1)
+
+    def test_stats_for_filter_leader_player_filter(self):
+        g = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g, player=self.player_a, leader="Muad'Dib", victory_points=10, order=0
+        )
+        GameResult.objects.create(
+            game=g, player=self.player_b, leader="Chani", victory_points=5, order=1
+        )
+        g2 = self._game(league=self.league)
+        GameResult.objects.create(
+            game=g2, player=self.player_a, leader="Chani", victory_points=12, order=0
+        )
+        GameResult.objects.create(
+            game=g2, player=self.player_b, leader="Muad'Dib", victory_points=8, order=1
+        )
+        data = stats_for_filter(["liga-a"], False, player_slugs=[self.player_a.slug])
+        by_leader = {r["leader"]: r for r in data["leader_rows"]}
+        self.assertEqual(by_leader["Muad'Dib"]["times_played"], 1)
+        self.assertEqual(by_leader["Chani"]["times_played"], 1)
+        self.assertEqual(data["leader_filter_label"], "Ana")
+        unfiltered = stats_for_filter(["liga-a"], False)
+        self.assertEqual(
+            {r["leader"]: r for r in unfiltered["leader_rows"]}["Muad'Dib"]["times_played"],
+            2,
+        )
+
     def test_stats_for_filter_includes_leader_placement_counts(self):
         g = self._game(league=self.league)
         GameResult.objects.create(

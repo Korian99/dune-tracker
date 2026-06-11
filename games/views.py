@@ -376,14 +376,16 @@ def game_delete(request, pk):
 def stats(request):
     from games.services.stats_queries import parse_stats_filter, stats_for_filter
 
-    league_slugs, include_casual = parse_stats_filter(request)
+    league_slugs, include_casual, player_slugs = parse_stats_filter(request)
     # Legacy single-league links: ?league=slug
     legacy_slug = request.GET.get("league")
     if legacy_slug and legacy_slug not in league_slugs:
         league_slugs = [legacy_slug]
         include_casual = False
 
-    data = stats_for_filter(league_slugs, include_casual)
+    data = stats_for_filter(
+        league_slugs, include_casual, player_slugs=player_slugs
+    )
     all_leagues = League.objects.order_by("name")
 
     return render(
@@ -392,6 +394,9 @@ def stats(request):
         {
             "all_leagues": all_leagues,
             "selected_league_slugs": set(data["league_slugs"]),
+            "selected_player_slugs": set(data["player_slugs"]),
+            "filter_players": data["filter_players"],
+            "leader_filter_label": data["leader_filter_label"],
             "include_casual": data["include_casual"],
             "scope_label": data["scope_label"],
             "summary": data["summary"],

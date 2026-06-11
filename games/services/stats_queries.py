@@ -6,16 +6,17 @@ from collections import defaultdict
 
 from django.db.models import Avg, Count, Q
 
-from games.models import Game, GameResult, League
+from games.models import Game, GameResult, League, Player
 
 from .scoring import league_standings
 
 
-def parse_stats_filter(request) -> tuple[list[str], bool]:
-    """Return (league_slugs, include_casual) from GET params."""
+def parse_stats_filter(request) -> tuple[list[str], bool, list[str]]:
+    """Return (league_slugs, include_casual, player_slugs) from GET params."""
     league_slugs = [s for s in request.GET.getlist("leagues") if s.strip()]
     include_casual = request.GET.get("casual") == "1"
-    return league_slugs, include_casual
+    player_slugs = [s for s in request.GET.getlist("players") if s.strip()]
+    return league_slugs, include_casual, player_slugs
 
 
 def games_for_filter(league_slugs: list[str], include_casual: bool):
@@ -50,6 +51,23 @@ def results_for_games(games_qs):
     return GameResult.objects.filter(game__in=games_qs).select_related(
         "game", "player", "game__league"
     )
+
+
+def players_in_games(games_qs):
+    """Distinct players who appear in the filtered game set."""
+    return Player.objects.filter(game_results__game__in=games_qs).distinct().order_by("name")
+
+
+def leader_filter_label(player_slugs: list[str]) -> str | None:
+    """Spanish label for leader-stats player filter, or None if unset."""
+    if not player_slugs:
+        return None
+    names = list(
+        Player.objects.filter(slug__in=player_slugs).order_by("name").values_list("name", flat=True)
+    )
+    if not names:
+        return None
+    return " · ".join(names)
 
 
 def _format_placement(avg: float) -> str:
@@ -175,13 +193,23 @@ def aggregate_leader_stats(results) -> list[dict]:
     return rows
 
 
-def stats_for_filter(league_slugs: list[str], include_casual: bool):
+def stats_for_filter(
+    league_slugs: list[str],
+    include_casual: bool,
+    *,
+    player_slugs: list[str] | None = None,
+):
     """
     Build player rows, leader rows, summary, and optional single-league standings.
+
+    When player_slugs is set, leader_rows only include results for those players;
+    player_rows and summary still use the full game filter.
     """
+    player_slugs = player_slugs or []
     games_qs = games_for_filter(league_slugs, include_casual)
     results = results_for_games(games_qs)
     scope_label = filter_scope_label(league_slugs, include_casual)
+    filter_players = players_in_games(games_qs)
 
     summary = games_qs.aggregate(
         total=Count("id"),
@@ -210,7 +238,10 @@ def stats_for_filter(league_slugs: list[str], include_casual: bool):
     else:
         player_rows = aggregate_player_stats(results)
 
-    leader_rows = aggregate_leader_stats(results)
+    leader_results = results
+    if player_slugs:
+        leader_results = results.filter(player__slug__in=player_slugs)
+    leader_rows = aggregate_leader_stats(leader_results)
 
     return {
         "scope_label": scope_label,
@@ -223,4 +254,7 @@ def stats_for_filter(league_slugs: list[str], include_casual: bool):
         "use_league_scoring": league_standings_rows is not None,
         "league_slugs": league_slugs,
         "include_casual": include_casual,
+        "player_slugs": player_slugs,
+        "filter_players": filter_players,
+        "leader_filter_label": leader_filter_label(player_slugs),
     }
