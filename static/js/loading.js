@@ -1,12 +1,12 @@
 /**
- * Full-page loading overlay for slow form submits and marked navigation links.
- * Skips forms/links with data-no-loading. Waits briefly before showing to avoid flashes.
+ * Full-page loading overlay for slow form submits and navigation.
+ * Skips forms/links with data-no-loading. Links wait briefly before showing.
  */
 (function () {
   const overlay = document.getElementById("page-loading");
   if (!overlay) return;
 
-  const SHOW_DELAY_MS = 200;
+  const LINK_DELAY_MS = 150;
   let showTimer = null;
 
   function hideLoading() {
@@ -16,17 +16,23 @@
     document.body.classList.remove("is-loading");
   }
 
-  function showLoading() {
+  function revealLoading() {
+    overlay.hidden = false;
+    document.body.classList.add("is-loading");
+  }
+
+  function showLoadingForLink() {
     clearTimeout(showTimer);
-    showTimer = window.setTimeout(function () {
-      overlay.hidden = false;
-      document.body.classList.add("is-loading");
-    }, SHOW_DELAY_MS);
+    showTimer = window.setTimeout(revealLoading, LINK_DELAY_MS);
   }
 
   function isSlowNavPath(pathname) {
     const path = (pathname || "").replace(/\/+$/, "") || "/";
-    return path.endsWith("/stats");
+    if (path === "/" || path === "/games" || path === "/stats" || path === "/leagues") {
+      return true;
+    }
+    // League detail only (not /leagues/new, /edit, /export, …)
+    return /^\/leagues\/[^/]+$/.test(path);
   }
 
   function shouldArmLink(link) {
@@ -49,13 +55,14 @@
     if (!(form instanceof HTMLFormElement)) return;
     if (form.dataset.noLoading !== undefined) return;
     if (form.target && form.target !== "_self") return;
-    showLoading();
+    clearTimeout(showTimer);
+    revealLoading();
   });
 
   document.addEventListener("click", function (event) {
-    const link = event.target.closest("a[data-loading], a.js-show-loading");
+    const link = event.target.closest("a[href]");
     if (!link || !shouldArmLink(link)) return;
-    showLoading();
+    showLoadingForLink();
   });
 
   window.addEventListener("pageshow", hideLoading);

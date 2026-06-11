@@ -13,7 +13,7 @@
 {% if leagues %}
 <div class="card-grid">
   {% for league in leagues %}
-  <a href="{% url 'games:league_detail' slug=league.slug %}" class="card card-link">
+  <a href="{% url 'games:league_detail' slug=league.slug %}" class="card card-link js-show-loading">
     <h3 class="card-title">{{ league.name }}</h3>
     <p class="meta">
       {{ league.game_count }}

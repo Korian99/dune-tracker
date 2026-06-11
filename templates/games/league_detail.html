@@ -103,7 +103,7 @@
           <strong>{{ holder.player_name }}</strong>
           {% if holder.game_id %}
           <span class="meta">
-            <a href="{% url 'games:detail' pk=holder.game_id %}">{{ holder.played_on }}</a>
+            <a href="{% url 'games:detail' pk=holder.game_id %}?return_sort={{ games_sort }}">{{ holder.played_on }}</a>
             · {{ holder.victory_points }} PV
           </span>
           {% endif %}
@@ -149,7 +149,7 @@
           </p>
         </div>
         <div class="row-actions">
-          <a href="{% url 'games:detail' pk=game.pk %}">Detalle</a>
+          <a href="{% url 'games:detail' pk=game.pk %}?return_sort={{ games_sort }}">Detalle</a>
           · <a href="{% url 'games:edit' pk=game.pk %}?return_sort={{ games_sort }}">Editar</a>
         </div>
       </div>

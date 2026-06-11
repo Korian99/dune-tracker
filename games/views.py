@@ -202,6 +202,10 @@ def game_detail(request, pk):
     league_score_rows = None
     if game.league_id:
         league_score_rows = league_score_rows_for_game(game, game.league)
+    return_sort = _return_sort_from_request(request)
+    league_back_url = (
+        _league_game_url(game, return_sort=return_sort) if game.league_id else None
+    )
     return render(
         request,
         "games/game_detail.html",
@@ -213,6 +217,8 @@ def game_detail(request, pk):
             "has_vp_ties": has_vp_ties(game),
             "has_top_vp_tie": has_top_vp_tie(game),
             "tie_groups": vp_tie_groups(game),
+            "return_sort": return_sort,
+            "league_back_url": league_back_url,
         },
     )
 

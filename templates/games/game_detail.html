@@ -8,7 +8,7 @@
     <p class="eyebrow">
       {{ game.get_base_game_display }}
       {% if game.league %}
-        · <a href="{% url 'games:league_detail' slug=game.league.slug %}">{{ game.league.name }}</a>
+        · <a href="{% url 'games:league_detail' slug=game.league.slug %}" class="js-show-loading">{{ game.league.name }}</a>
       {% else %}
         · <span class="tag tag-casual tag-sm">Casual</span>
       {% endif %}
@@ -23,7 +23,7 @@
     </p>
   </div>
   <div class="header-actions">
-    <a href="{% url 'games:edit' pk=game.pk %}" class="btn btn-primary">Editar partida</a>
+    <a href="{% url 'games:edit' pk=game.pk %}{% if game.league %}?return_sort={{ return_sort|default:'newest' }}{% endif %}" class="btn btn-primary">Editar partida</a>
     <form method="post" action="{% url 'games:delete' pk=game.pk %}" class="inline-form"
           onsubmit="return confirm('¿Eliminar esta partida?');">
       {% csrf_token %}
@@ -35,11 +35,11 @@
 {% if needs_tiebreak %}
 <section class="flash flash-warning tiebreak-banner">
   <p>Hay empates en PV sin resolver (afectan puestos 1.º–4.º).</p>
-  <a href="{% url 'games:resolve_tie' pk=game.pk %}" class="btn btn-primary">Resolver empates</a>
+  <a href="{% url 'games:resolve_tie' pk=game.pk %}{% if game.league %}?return_sort={{ return_sort|default:'newest' }}{% endif %}" class="btn btn-primary">Resolver empates</a>
 </section>
 {% elif has_vp_ties %}
 <p class="help">
-  <a href="{% url 'games:resolve_tie' pk=game.pk %}">Revisar o cambiar desempates</a>
+  <a href="{% url 'games:resolve_tie' pk=game.pk %}{% if game.league %}?return_sort={{ return_sort|default:'newest' }}{% endif %}">Revisar o cambiar desempates</a>
   (puestos 2.º–4.º y ganador de la partida).
 </p>
 {% endif %}
@@ -77,5 +77,11 @@
 </section>
 {% endif %}
 
-<p><a href="{% url 'games:list' %}">← Volver a partidas</a></p>
+<p>
+  {% if league_back_url %}
+  <a href="{{ league_back_url }}" class="js-show-loading">← Volver a {{ game.league.name }}</a>
+  {% else %}
+  <a href="{% url 'games:list' %}">← Volver a partidas</a>
+  {% endif %}
+</p>
 {% endblock %}

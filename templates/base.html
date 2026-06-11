@@ -12,7 +12,7 @@
 <body>
   <header class="site-header">
     <div class="container header-inner">
-      <a href="{% url 'games:home' %}" class="logo">
+      <a href="{% url 'games:home' %}" class="logo js-show-loading">
         <img src="{% static 'img/logo.png' %}" alt="Dune Tracker" class="logo-img" width="32" height="40">
         <span class="logo-text">Dune Tracker</span>
       </a>
@@ -23,10 +23,10 @@
         <span class="nav-toggle-bar"></span>
       </label>
       <nav id="site-nav" class="nav" aria-label="Principal">
-        <a href="{% url 'games:home' %}">Inicio</a>
-        <a href="{% url 'games:list' %}">Partidas</a>
-        <a href="{% url 'games:league_list' %}">Ligas</a>
-        <a href="{% url 'games:stats' %}">Estadísticas</a>
+        <a href="{% url 'games:home' %}" class="js-show-loading">Inicio</a>
+        <a href="{% url 'games:list' %}" class="js-show-loading">Partidas</a>
+        <a href="{% url 'games:league_list' %}" class="js-show-loading">Ligas</a>
+        <a href="{% url 'games:stats' %}" class="js-show-loading">Estadísticas</a>
         <a href="{% url 'games:create' %}" class="btn btn-primary nav-cta">Registrar partida</a>
       </nav>
     </div>

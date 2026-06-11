@@ -28,7 +28,7 @@
   <h2>Tus ligas</h2>
   <div class="card-grid">
     {% for league in leagues %}
-    <a href="{% url 'games:league_detail' slug=league.slug %}" class="card card-link">
+    <a href="{% url 'games:league_detail' slug=league.slug %}" class="card card-link js-show-loading">
       <h3 class="card-title">{{ league.name }}</h3>
       <p class="meta">
         {{ league.game_count }}
@@ -67,7 +67,7 @@
     </article>
     {% endfor %}
   </div>
-  <p class="section-footer"><a href="{% url 'games:list' %}">Ver todas las partidas →</a></p>
+  <p class="section-footer"><a href="{% url 'games:list' %}" class="js-show-loading">Ver todas las partidas →</a></p>
 </section>
 {% else %}
 <section class="empty-state">
