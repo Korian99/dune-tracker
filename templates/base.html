@@ -46,6 +46,15 @@
       <p>Registra tus partidas de <em>Dune: Imperium — Uprising</em> y <em>Bloodlines</em></p>
     </div>
   </footer>
+
+  <div id="page-loading" class="page-loading" hidden aria-live="polite" aria-busy="true">
+    <div class="page-loading__panel" role="status">
+      <div class="page-loading__spinner" aria-hidden="true"></div>
+      <p class="page-loading__text">Cargando…</p>
+    </div>
+  </div>
+
+  <script src="{% static 'js/loading.js' %}" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
