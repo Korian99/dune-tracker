@@ -113,21 +113,66 @@ def _config_system(config: dict[str, Any]) -> str:
     return config.get("system") or "standard"
 
 
-def _has_highest_vp(result: GameResult) -> bool:
-    """True if this result qualifies for the early-win bonus."""
-    max_vp = (
-        result.game.results.order_by("-victory_points")
-        .values_list("victory_points", flat=True)
-        .first()
-    )
-    if max_vp is None or result.victory_points != max_vp:
-        return False
-    game = result.game
+def _winner_pk_for_game(game, game_results: list[GameResult]) -> int | None:
+    """Winner pk without extra queries when game_results are already loaded."""
     if game.tied_game:
+        return None
+    if game.designated_winner_id:
+        return game.designated_winner_id
+    if not game_results:
+        return None
+    max_vp = max(r.victory_points for r in game_results)
+    leaders = [r for r in game_results if r.victory_points == max_vp]
+    if len(leaders) == 1:
+        return leaders[0].pk
+    return None
+
+
+def build_game_scoring_context(results) -> dict[int, dict[str, Any]]:
+    """Per-game max VP, winner, tie flag, and rounds for bulk scoring."""
+    by_game: dict[int, list[GameResult]] = defaultdict(list)
+    for result in results:
+        by_game[result.game_id].append(result)
+
+    ctx: dict[int, dict[str, Any]] = {}
+    for game_id, game_results in by_game.items():
+        game = game_results[0].game
+        max_vp = max(r.victory_points for r in game_results)
+        ctx[game_id] = {
+            "max_vp": max_vp,
+            "winner_pk": _winner_pk_for_game(game, game_results),
+            "tied_game": game.tied_game,
+            "rounds": game.rounds,
+        }
+    return ctx
+
+
+def _has_highest_vp(
+    result: GameResult,
+    game_ctx: dict[str, Any] | None = None,
+) -> bool:
+    """True if this result qualifies for the early-win bonus."""
+    if game_ctx is None:
+        max_vp = (
+            result.game.results.order_by("-victory_points")
+            .values_list("victory_points", flat=True)
+            .first()
+        )
+        if max_vp is None or result.victory_points != max_vp:
+            return False
+        game = result.game
+        if game.tied_game:
+            return False
+        winner = game.resolved_winner()
+        if winner is not None:
+            return result.pk == winner.pk
+        return True
+
+    if game_ctx["tied_game"] or result.victory_points != game_ctx["max_vp"]:
         return False
-    winner = game.resolved_winner()
-    if winner is not None:
-        return result.pk == winner.pk
+    winner_pk = game_ctx["winner_pk"]
+    if winner_pk is not None:
+        return result.pk == winner_pk
     return True
 
 
@@ -136,7 +181,11 @@ def _vp_threshold_bonuses(vp: int, thresholds: list[int]) -> int:
 
 
 def compute_league_points_breakdown(
-    result: GameResult, league: League
+    result: GameResult,
+    league: League,
+    *,
+    placement: int | None = None,
+    game_ctx: dict[str, Any] | None = None,
 ) -> LeaguePointsBreakdown:
     """
     Per-game league points with components.
@@ -147,23 +196,25 @@ def compute_league_points_breakdown(
     """
     config = resolve_scoring_config(league)
 
+    if placement is None:
+        placement = result.placement
+
     if _config_system(config) == "victory_points":
         vp = float(result.victory_points)
         return LeaguePointsBreakdown(
-            placement=result.placement,
+            placement=placement,
             placement_points=0,
             early_win=0,
             vp_threshold_bonuses=0,
             total=vp,
         )
 
-    placement = result.placement
     placement_pts = config["placement_points"].get(placement, 0)
 
     early_win = 0
     max_round = config["early_win_max_round"]
-    if max_round > 0 and _has_highest_vp(result):
-        rounds = result.game.rounds
+    if max_round > 0 and _has_highest_vp(result, game_ctx):
+        rounds = game_ctx["rounds"] if game_ctx is not None else result.game.rounds
         if rounds is not None and 1 <= rounds <= max_round:
             early_win = 1
 
@@ -252,22 +303,39 @@ def _select_counted_scores(
     return ordered[:count_games]
 
 
-def league_standings(league: League):
+def league_standings(league: League, results=None):
     """
     Aggregate standings. Only the best count_games per player count toward totals.
+
+    Optional ``results`` avoids a duplicate query when the caller already loaded
+    all league game results (e.g. stats page with a single-league filter).
     """
+    from games.services.tiebreak import build_placement_cache
+
     config = resolve_scoring_config(league)
     count_games = config["count_games"]
 
     per_player_games: dict[str, list[tuple[float, GameResult, LeaguePointsBreakdown]]] = (
         defaultdict(list)
     )
-    results = GameResult.objects.filter(game__league=league).select_related(
-        "game", "player"
-    )
+    if results is None:
+        results = list(
+            GameResult.objects.filter(game__league=league).select_related(
+                "game", "player", "game__designated_winner"
+            )
+        )
+    else:
+        results = list(results)
+    placement_cache = build_placement_cache(results)
+    game_ctx_by_id = build_game_scoring_context(results)
 
     for result in results:
-        breakdown = compute_league_points_breakdown(result, league)
+        breakdown = compute_league_points_breakdown(
+            result,
+            league,
+            placement=placement_cache.get(result.pk, 1),
+            game_ctx=game_ctx_by_id.get(result.game_id),
+        )
         per_player_games[result.player.name].append(
             (breakdown["total"], result, breakdown)
         )
@@ -281,7 +349,11 @@ def league_standings(league: League):
 
         score_total = round(sum(x[0] for x in all_games), 1)
         score_best_n = round(sum(x[0] for x in counted), 1)
-        wins = sum(1 for x in all_games if x[1].placement == 1)
+        wins = sum(
+            1
+            for x in all_games
+            if placement_cache.get(x[1].pk, 1) == 1
+        )
         win_rate = (
             round(100 * wins / games_played, 1) if games_played else 0.0
         )

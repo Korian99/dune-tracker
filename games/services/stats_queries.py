@@ -48,20 +48,32 @@ def filter_scope_label(league_slugs: list[str], include_casual: bool) -> str:
 
 
 def results_for_games(games_qs):
+    """Load result rows for stats; placement comes from synced order field."""
     return GameResult.objects.filter(game__in=games_qs).select_related(
-        "game", "player", "game__league"
+        "game", "player", "game__league", "game__designated_winner"
     )
 
 
-def players_in_games(games_qs):
-    """Distinct players who appear in the filtered game set."""
-    return Player.objects.filter(game_results__game__in=games_qs).distinct().order_by("name")
+def players_from_results(results_list: list[GameResult]):
+    """Distinct players in result order by name."""
+    by_id: dict[int, Player] = {}
+    for result in results_list:
+        by_id[result.player_id] = result.player
+    return sorted(by_id.values(), key=lambda p: p.name)
 
 
-def leader_filter_label(player_slugs: list[str]) -> str | None:
+def leader_filter_label(
+    player_slugs: list[str],
+    filter_players: list[Player] | None = None,
+) -> str | None:
     """Spanish label for leader-stats player filter, or None if unset."""
     if not player_slugs:
         return None
+    slug_set = set(player_slugs)
+    if filter_players:
+        names = [p.name for p in filter_players if p.slug in slug_set]
+        if names:
+            return " · ".join(names)
     names = list(
         Player.objects.filter(slug__in=player_slugs).order_by("name").values_list("name", flat=True)
     )
@@ -86,32 +98,15 @@ def _empty_placement_counts() -> dict[int, int]:
     return {1: 0, 2: 0, 3: 0, 4: 0}
 
 
-def _count_wins(game_results) -> int:
-    """Games finished 1st (matches placement_1 column; includes shared 1st on ties)."""
-    return sum(1 for r in game_results if r.placement == 1)
+def _placement_cache(results_list: list[GameResult]) -> dict[int, int]:
+    """Fast path: order field is placement after sync_result_orders_for_game."""
+    if not results_list:
+        return {}
+    if all(r.order >= 1 for r in results_list):
+        return {r.pk: r.order for r in results_list}
+    from games.services.tiebreak import build_placement_cache
 
-
-def _placement_counts_for_results(results) -> dict[str, dict[int, int]]:
-    """Per player name: how many finishes at each placement (1–4)."""
-    by_player: dict[str, dict[int, int]] = defaultdict(_empty_placement_counts)
-    for result in results:
-        placement = result.placement
-        if 1 <= placement <= 4:
-            by_player[result.player.name][placement] += 1
-    return dict(by_player)
-
-
-def _placement_counts_for_leaders(results) -> dict[str, dict[int, int]]:
-    """Per leader name: how many finishes at each placement (1–4) when that leader was played."""
-    by_leader: dict[str, dict[int, int]] = defaultdict(_empty_placement_counts)
-    for result in results:
-        leader = (result.leader or "").strip()
-        if not leader:
-            continue
-        placement = result.placement
-        if 1 <= placement <= 4:
-            by_leader[leader][placement] += 1
-    return dict(by_leader)
+    return build_placement_cache(results_list)
 
 
 def _attach_placement_counts(rows: list[dict], counts_by_name: dict[str, dict[int, int]]):
@@ -123,22 +118,45 @@ def _attach_placement_counts(rows: list[dict], counts_by_name: dict[str, dict[in
             row[f"placement_{place}"] = counts[place]
 
 
-def aggregate_player_stats(results) -> list[dict]:
-    """Player leaderboard for a flat result set (no league best-N rules)."""
-    counts_by_name = _placement_counts_for_results(results)
-    by_player: dict[str, list] = defaultdict(list)
-    for result in results:
-        by_player[result.player.name].append(result)
+def _aggregate_player_and_leader_stats(
+    results_list: list[GameResult],
+    placement_cache: dict[int, int],
+    *,
+    leader_player_slugs: set[str] | None = None,
+) -> tuple[list[dict], list[dict], dict[str, dict[int, int]]]:
+    """
+    Single pass: player rows, leader rows, and per-player placement counts.
+    """
+    by_player: dict[str, list[tuple[GameResult, int]]] = defaultdict(list)
+    by_leader: dict[str, list[tuple[GameResult, int]]] = defaultdict(list)
+    counts_by_name: dict[str, dict[int, int]] = defaultdict(_empty_placement_counts)
+    counts_by_leader: dict[str, dict[int, int]] = defaultdict(_empty_placement_counts)
 
-    rows = []
-    for name, game_results in by_player.items():
-        games_played = len(game_results)
-        wins = _count_wins(game_results)
-        vp_sum = sum(r.victory_points for r in game_results)
-        placement_sum = sum(r.placement for r in game_results)
+    for result in results_list:
+        placement = placement_cache.get(result.pk, 1)
+        name = result.player.name
+        by_player[name].append((result, placement))
+        if 1 <= placement <= 4:
+            counts_by_name[name][placement] += 1
+
+        leader = (result.leader or "").strip()
+        if not leader:
+            continue
+        if leader_player_slugs is not None and result.player.slug not in leader_player_slugs:
+            continue
+        by_leader[leader].append((result, placement))
+        if 1 <= placement <= 4:
+            counts_by_leader[leader][placement] += 1
+
+    player_rows = []
+    for name, entries in by_player.items():
+        games_played = len(entries)
+        wins = sum(1 for _, place in entries if place == 1)
+        vp_sum = sum(r.victory_points for r, _ in entries)
+        placement_sum = sum(place for _, place in entries)
         avg_placement = placement_sum / games_played if games_played else 0
         counts = counts_by_name.get(name, _empty_placement_counts())
-        rows.append(
+        player_rows.append(
             {
                 "name": name,
                 "games": games_played,
@@ -153,28 +171,17 @@ def aggregate_player_stats(results) -> list[dict]:
                 "placement_4": counts[4],
             }
         )
-    rows.sort(key=lambda r: (-r["wins"], -r["win_rate"], -r["avg_vp"]))
-    return rows
+    player_rows.sort(key=lambda r: (-r["wins"], -r["win_rate"], -r["avg_vp"]))
 
-
-def aggregate_leader_stats(results) -> list[dict]:
-    """Per-leader: times played, wins, win rate, average placement, average VP."""
-    counts_by_leader = _placement_counts_for_leaders(results)
-    by_leader: dict[str, list] = defaultdict(list)
-    for result in results:
-        leader = (result.leader or "").strip()
-        if leader:
-            by_leader[leader].append(result)
-
-    rows = []
-    for leader, game_results in by_leader.items():
-        times = len(game_results)
-        wins = _count_wins(game_results)
-        vp_sum = sum(r.victory_points for r in game_results)
-        placement_sum = sum(r.placement for r in game_results)
+    leader_rows = []
+    for leader, entries in by_leader.items():
+        times = len(entries)
+        wins = sum(1 for _, place in entries if place == 1)
+        vp_sum = sum(r.victory_points for r, _ in entries)
+        placement_sum = sum(place for _, place in entries)
         avg_placement = placement_sum / times if times else 0
         counts = counts_by_leader.get(leader, _empty_placement_counts())
-        rows.append(
+        leader_rows.append(
             {
                 "leader": leader,
                 "times_played": times,
@@ -189,8 +196,27 @@ def aggregate_leader_stats(results) -> list[dict]:
                 "placement_4": counts[4],
             }
         )
-    rows.sort(key=lambda r: (-r["times_played"], -r["win_rate"], -r["avg_placement"]))
-    return rows
+    leader_rows.sort(key=lambda r: (-r["times_played"], -r["win_rate"], -r["avg_placement"]))
+
+    return player_rows, leader_rows, dict(counts_by_name)
+
+
+def aggregate_player_stats(results, *, placement_cache: dict[int, int] | None = None) -> list[dict]:
+    """Player leaderboard for a flat result set (no league best-N rules)."""
+    results_list = list(results) if not isinstance(results, list) else results
+    if placement_cache is None:
+        placement_cache = _placement_cache(results_list)
+    player_rows, _, _ = _aggregate_player_and_leader_stats(results_list, placement_cache)
+    return player_rows
+
+
+def aggregate_leader_stats(results, *, placement_cache: dict[int, int] | None = None) -> list[dict]:
+    """Per-leader: times played, wins, win rate, average placement, average VP."""
+    results_list = list(results) if not isinstance(results, list) else results
+    if placement_cache is None:
+        placement_cache = _placement_cache(results_list)
+    _, leader_rows, _ = _aggregate_player_and_leader_stats(results_list, placement_cache)
+    return leader_rows
 
 
 def stats_for_filter(
@@ -207,9 +233,11 @@ def stats_for_filter(
     """
     player_slugs = player_slugs or []
     games_qs = games_for_filter(league_slugs, include_casual)
-    results = results_for_games(games_qs)
+    results_list = list(results_for_games(games_qs))
+    placement_cache = _placement_cache(results_list)
+
     scope_label = filter_scope_label(league_slugs, include_casual)
-    filter_players = players_in_games(games_qs)
+    filter_players = players_from_results(results_list)
 
     summary = games_qs.aggregate(
         total=Count("id"),
@@ -221,27 +249,30 @@ def stats_for_filter(
     league_standings_rows = None
     count_games = None
     single_league = None
+    leader_slug_set = set(player_slugs) if player_slugs else None
 
-    placement_counts_by_name = _placement_counts_for_results(results)
-
-    if len(league_slugs) == 1 and not include_casual:
+    use_single_league = len(league_slugs) == 1 and not include_casual
+    if use_single_league:
         single_league = League.objects.filter(slug=league_slugs[0]).first()
-        if single_league:
-            from .scoring import resolve_scoring_config
 
-            league_standings_rows = league_standings(single_league)
-            count_games = resolve_scoring_config(single_league)["count_games"]
-            _attach_placement_counts(league_standings_rows, placement_counts_by_name)
-            player_rows = league_standings_rows
-        else:
-            player_rows = aggregate_player_stats(results)
+    if use_single_league and single_league:
+        from .scoring import resolve_scoring_config
+
+        _, leader_rows, counts_by_name = _aggregate_player_and_leader_stats(
+            results_list,
+            placement_cache,
+            leader_player_slugs=leader_slug_set,
+        )
+        league_standings_rows = league_standings(single_league, results=results_list)
+        count_games = resolve_scoring_config(single_league)["count_games"]
+        _attach_placement_counts(league_standings_rows, counts_by_name)
+        player_rows = league_standings_rows
     else:
-        player_rows = aggregate_player_stats(results)
-
-    leader_results = results
-    if player_slugs:
-        leader_results = results.filter(player__slug__in=player_slugs)
-    leader_rows = aggregate_leader_stats(leader_results)
+        player_rows, leader_rows, _ = _aggregate_player_and_leader_stats(
+            results_list,
+            placement_cache,
+            leader_player_slugs=leader_slug_set,
+        )
 
     return {
         "scope_label": scope_label,
@@ -256,5 +287,5 @@ def stats_for_filter(
         "include_casual": include_casual,
         "player_slugs": player_slugs,
         "filter_players": filter_players,
-        "leader_filter_label": leader_filter_label(player_slugs),
+        "leader_filter_label": leader_filter_label(player_slugs, filter_players),
     }

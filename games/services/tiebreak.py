@@ -228,7 +228,52 @@ def placements_for_game(game: Game) -> dict[int, int]:
 
 
 def result_placement(result: GameResult) -> int:
+    if result.order >= 1 and game_orders_are_synced(result.game):
+        return result.order
     return placements_for_game(result.game).get(result.pk, 1)
+
+
+def sync_result_orders_for_game(game: Game) -> None:
+    """Write competition placement (1–4) onto each result's order field."""
+    placements = placements_for_game(game)
+    if not placements:
+        return
+    to_update: list[GameResult] = []
+    for result in game.results.all():
+        placement = placements.get(result.pk, 1)
+        if result.order != placement:
+            result.order = placement
+            to_update.append(result)
+    if to_update:
+        GameResult.objects.bulk_update(to_update, ["order"])
+
+
+def game_orders_are_synced(game: Game) -> bool:
+    """True when every result row has order set to competition placement."""
+    results = list(game.results.all())
+    return bool(results) and all(r.order >= 1 for r in results)
+
+
+def build_placement_cache(results) -> dict[int, int]:
+    """Map GameResult pk -> placement; reads order when rows are synced."""
+    if not results:
+        return {}
+    results_list = list(results) if not isinstance(results, list) else results
+    if all(r.order >= 1 for r in results_list):
+        return {r.pk: r.order for r in results_list}
+
+    by_game: dict[int, list[GameResult]] = defaultdict(list)
+    for result in results_list:
+        by_game[result.game_id].append(result)
+
+    placements: dict[int, int] = {}
+    for game_results in by_game.values():
+        if all(r.order >= 1 for r in game_results):
+            for result in game_results:
+                placements[result.pk] = result.order
+        else:
+            placements.update(placements_for_game(game_results[0].game))
+    return placements
 
 
 def normalize_tiebreaks_after_save(game: Game) -> None:
@@ -288,6 +333,8 @@ def normalize_tiebreaks_after_save(game: Game) -> None:
     if update_fields:
         game.save(update_fields=list(dict.fromkeys(update_fields)))
 
+    sync_result_orders_for_game(game)
+
 
 def normalize_winner_after_save(game: Game) -> None:
     """Backward-compatible alias."""
@@ -328,6 +375,7 @@ def apply_tiebreak(
             tiebreaks[str(target_vp)] = "tie"
             game.placement_tiebreaks = tiebreaks
             game.save(update_fields=["placement_tiebreaks"])
+        sync_result_orders_for_game(game)
         return
 
     if resolution == "rank":
@@ -351,6 +399,7 @@ def apply_tiebreak(
             )
         else:
             game.save(update_fields=["placement_tiebreaks"])
+        sync_result_orders_for_game(game)
         return
 
     if resolution != "winner" or not winner_result_id:
@@ -378,6 +427,7 @@ def apply_tiebreak(
         tiebreaks[str(target_vp)] = winner_pk
         game.placement_tiebreaks = tiebreaks
         game.save(update_fields=["placement_tiebreaks"])
+    sync_result_orders_for_game(game)
 
 
 def apply_tiebreaks_from_post(game: Game, post) -> None:
@@ -426,6 +476,8 @@ def apply_tiebreaks_from_post(game: Game, post) -> None:
 
     if errors:
         raise ValueError(" ".join(errors))
+
+    sync_result_orders_for_game(game)
 
 
 def selected_tiebreak_for_group(game: Game, group: dict) -> dict:

@@ -322,6 +322,45 @@ class TiebreakLogicTests(TestCase):
 
 
 @override_settings(STORAGES=STORAGES_OVERRIDE)
+class ResultOrderSyncTests(TestCase):
+    def test_order_matches_placement_after_save(self):
+        league = League.objects.create(name="Order Liga", slug="order-liga")
+        game = Game.objects.create(
+            league=league, played_on=date.today(), player_count=2
+        )
+        ana = resolve_player("Ana", league=league)
+        bob = resolve_player("Bob", league=league)
+        r1 = GameResult.objects.create(game=game, player=ana, victory_points=10)
+        r2 = GameResult.objects.create(game=game, player=bob, victory_points=5)
+        from games.services.tiebreak import sync_result_orders_for_game
+
+        sync_result_orders_for_game(game)
+        r1.refresh_from_db()
+        r2.refresh_from_db()
+        self.assertEqual(r1.order, 1)
+        self.assertEqual(r2.order, 2)
+        self.assertEqual(r1.placement, 1)
+        self.assertEqual(r2.placement, 2)
+
+    def test_tied_first_place_shares_order(self):
+        league = League.objects.create(name="Tie Order", slug="tie-order")
+        game = Game.objects.create(
+            league=league, played_on=date.today(), player_count=2, tied_game=True
+        )
+        ana = resolve_player("Ana", league=league)
+        bob = resolve_player("Bob", league=league)
+        r1 = GameResult.objects.create(game=game, player=ana, victory_points=10)
+        r2 = GameResult.objects.create(game=game, player=bob, victory_points=10)
+        from games.services.tiebreak import sync_result_orders_for_game
+
+        sync_result_orders_for_game(game)
+        r1.refresh_from_db()
+        r2.refresh_from_db()
+        self.assertEqual(r1.order, 1)
+        self.assertEqual(r2.order, 1)
+
+
+@override_settings(STORAGES=STORAGES_OVERRIDE)
 class TiebreakRedirectTests(TestCase):
     def test_save_league_game_without_tie_redirects_to_league_card(self):
         league = League.objects.create(name="L redirect", slug="redirect-l")

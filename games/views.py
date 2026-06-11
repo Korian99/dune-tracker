@@ -41,10 +41,6 @@ def _save_results(formset, alliance_data=None):
     """Save result rows; always apply alliances against full game results."""
     results = formset.save()
     game = formset.instance
-    for i, result in enumerate(results):
-        if result.order != i:
-            result.order = i
-            result.save(update_fields=["order"])
     if game and game.pk:
         db_results = list(
             GameResult.objects.filter(game=game).select_related("player")

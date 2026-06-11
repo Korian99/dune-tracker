@@ -349,7 +349,10 @@ class GameResult(models.Model):
     alliance_guild = models.BooleanField(default=False)
     alliance_bene_gesserit = models.BooleanField(default=False)
     alliance_fremen = models.BooleanField(default=False)
-    order = models.PositiveSmallIntegerField(default=0)
+    order = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Competition placement (1 = 1st, 2 = 2nd, …); synced after save.",
+    )
 
     class Meta:
         ordering = ["order", "id"]
@@ -365,9 +368,12 @@ class GameResult(models.Model):
 
     @property
     def placement(self):
-        from games.services.tiebreak import result_placement
+        """Competition rank; stored in order after sync_result_orders_for_game."""
+        from games.services.tiebreak import game_orders_are_synced, placements_for_game
 
-        return result_placement(self)
+        if self.order >= 1 and game_orders_are_synced(self.game):
+            return self.order
+        return placements_for_game(self.game).get(self.pk, 1)
 
     @property
     def is_winner(self):

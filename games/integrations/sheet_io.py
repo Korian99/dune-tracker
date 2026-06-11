@@ -163,7 +163,7 @@ def import_games_for_league(
             duration_minutes=game_data.get("duration_minutes"),
             notes=import_note_key(import_key),
         )
-        for order, raw in enumerate(game_data["results"]):
+        for raw in game_data["results"]:
             row = _normalize_result_row(raw)
             player = resolve_player(row["player"], league=league)
             GameResult.objects.create(
@@ -176,10 +176,12 @@ def import_games_for_league(
                 alliance_guild=row["alliance_guild"],
                 alliance_bene_gesserit=row["alliance_bene_gesserit"],
                 alliance_fremen=row["alliance_fremen"],
-                order=order,
             )
         if any(r.get("bgc_placement") is not None for r in game_data["results"]):
             apply_bgc_placements(game, game_data["results"])
+        from games.services.tiebreak import sync_result_orders_for_game
+
+        sync_result_orders_for_game(game)
         created += 1
     return created, skipped
 
@@ -229,7 +231,7 @@ def export_game_block(game: Game) -> list[str]:
     league = game.league
     results = sorted(
         game.results.select_related("player"),
-        key=lambda r: (-r.victory_points, r.order, r.id),
+        key=lambda r: (r.order, r.id),
     )
     lines = [SHEET_HEADER]
     meta_rows = [
