@@ -134,8 +134,14 @@
     </nav>
   </div>
   {% if game_entries %}
-  <p class="help">Puntuación de liga por jugador en cada partida (PV, puesto y puntos con desglose).</p>
-  <div class="league-games-list">
+  <p class="help">
+    Puntuación de liga por jugador en cada partida (PV, puesto y puntos con desglose).
+    {% if games_page.paginator.num_pages > 1 %}
+    Página {{ games_page.number }} de {{ games_page.paginator.num_pages }}
+    ({{ games_page.paginator.count }} partidas).
+    {% endif %}
+  </p>
+  <div class="league-games-list" id="league-games">
     {% for entry in game_entries %}
     {% with game=entry.game %}
     <article class="league-game-card" id="game-{{ game.pk }}">
@@ -162,6 +168,23 @@
     {% endwith %}
     {% endfor %}
   </div>
+  {% if games_page.paginator.num_pages > 1 %}
+  <nav class="pager" aria-label="Páginas de partidas">
+    {% if games_page.has_previous %}
+    <a href="?sort={{ games_sort }}&amp;page={{ games_page.previous_page_number }}#league-games" class="btn btn-ghost btn-sm js-show-loading">Anterior</a>
+    {% else %}
+    <span class="btn btn-ghost btn-sm pager__disabled" aria-disabled="true">Anterior</span>
+    {% endif %}
+    <span class="pager__status">Página {{ games_page.number }} de {{ games_page.paginator.num_pages }}</span>
+    {% if games_page.has_next %}
+    <a href="?sort={{ games_sort }}&amp;page={{ games_page.next_page_number }}#league-games" class="btn btn-ghost btn-sm js-show-loading">Siguiente</a>
+    {% else %}
+    <span class="btn btn-ghost btn-sm pager__disabled" aria-disabled="true">Siguiente</span>
+    {% endif %}
+  </nav>
+  {% endif %}
+  {% elif games_page.paginator.count %}
+  <p class="empty">No hay partidas en esta página.</p>
   {% else %}
   <p class="empty">Esta liga aún no tiene partidas.</p>
   {% endif %}

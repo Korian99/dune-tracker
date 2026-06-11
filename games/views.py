@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.contrib import messages
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -16,6 +17,8 @@ from .forms import (
     _player_choice_list,
 )
 from .models import Game, GameResult, League, LeagueMembership
+
+LEAGUE_GAMES_PER_PAGE = 20
 from games.integrations.sheet_io import export_league_sheet
 from games.services.tiebreak import (
     apply_tiebreaks_from_post,
@@ -113,13 +116,38 @@ def _return_sort_from_request(request) -> str:
     return "oldest" if raw == "oldest" else "newest"
 
 
+def _league_games_queryset(league: League, games_sort: str):
+    games = league.games.select_related("designated_winner__player").prefetch_related(
+        "results__player"
+    )
+    if games_sort == "oldest":
+        return games.order_by("played_on", "created_at")
+    return games.order_by("-played_on", "-created_at")
+
+
+def _league_game_page_number(game: Game, games_sort: str) -> int:
+    """1-based page for a game in the paginated league games list."""
+    if not game.league_id:
+        return 1
+    game_pks = list(_league_games_queryset(game.league, games_sort).values_list("pk", flat=True))
+    try:
+        index = game_pks.index(game.pk)
+    except ValueError:
+        return 1
+    return index // LEAGUE_GAMES_PER_PAGE + 1
+
+
 def _league_game_url(game, *, return_sort: str = "newest") -> str | None:
     """League detail URL scrolled to a game card, or None if not a league game."""
     if not game.league_id:
         return None
     sort = "oldest" if return_sort == "oldest" else "newest"
     base = reverse("games:league_detail", kwargs={"slug": game.league.slug})
-    return f"{base}?sort={sort}#game-{game.pk}"
+    page = _league_game_page_number(game, sort)
+    query = f"sort={sort}"
+    if page > 1:
+        query += f"&page={page}"
+    return f"{base}?{query}#game-{game.pk}"
 
 
 def _redirect_after_game_save(game, request):
@@ -481,13 +509,15 @@ def league_detail(request, slug):
     league = get_object_or_404(League, slug=slug)
     games_sort = _league_games_sort(request)
     fecha_by_pk = _league_fecha_numbers(league)
-    games = league.games.select_related(
-        "designated_winner__player"
-    ).prefetch_related("results__player")
-    if games_sort == "oldest":
-        games = games.order_by("played_on", "created_at")
-    else:
-        games = games.order_by("-played_on", "-created_at")
+    games_qs = _league_games_queryset(league, games_sort)
+    paginator = Paginator(games_qs, LEAGUE_GAMES_PER_PAGE)
+    page_num = request.GET.get("page", "1")
+    try:
+        games_page = paginator.page(page_num)
+    except PageNotAnInteger:
+        games_page = paginator.page(1)
+    except EmptyPage:
+        games_page = paginator.page(paginator.num_pages)
     scoring_config = resolve_scoring_config(league)
     standings = league_standings(league)
     game_entries = [
@@ -496,7 +526,7 @@ def league_detail(request, slug):
             "fecha_number": fecha_by_pk[game.pk],
             "league_score_rows": league_score_rows_for_game(game, league),
         }
-        for game in games
+        for game in games_page.object_list
     ]
     return render(
         request,
@@ -504,6 +534,7 @@ def league_detail(request, slug):
         {
             "league": league,
             "game_entries": game_entries,
+            "games_page": games_page,
             "standings": standings,
             "hito_snapshots": league_hito_snapshots(league),
             "count_games": scoring_config["count_games"],

@@ -559,6 +559,51 @@ class LeagueGamesSortTests(TestCase):
 
 
 @override_settings(STORAGES=STORAGES_OVERRIDE)
+class LeagueGamesPaginationTests(TestCase):
+    def test_league_detail_paginates_games(self):
+        league = League.objects.create(name="Page Liga", slug="page-liga")
+        created = []
+        for day in range(1, 22):
+            created.append(
+                Game.objects.create(
+                    league=league,
+                    played_on=date(2024, 1, day),
+                    player_count=2,
+                )
+            )
+        client = Client()
+        url = reverse("games:league_detail", kwargs={"slug": league.slug})
+
+        page1 = client.get(url, {"sort": "newest"})
+        self.assertEqual(page1.status_code, 200)
+        self.assertEqual(len(page1.context["game_entries"]), 20)
+        self.assertTrue(page1.context["games_page"].has_next())
+        self.assertContains(page1, "Página 1 de 2")
+
+        page2 = client.get(url, {"sort": "newest", "page": 2})
+        self.assertEqual(len(page2.context["game_entries"]), 1)
+        self.assertEqual(page2.context["game_entries"][0]["game"].pk, created[0].pk)
+
+    def test_league_game_url_includes_page_for_deep_game(self):
+        from games.views import _league_game_url
+
+        league = League.objects.create(name="Deep Liga", slug="deep-liga")
+        games = []
+        for day in range(1, 22):
+            games.append(
+                Game.objects.create(
+                    league=league,
+                    played_on=date(2024, 1, day),
+                    player_count=2,
+                )
+            )
+        oldest = games[0]
+        url = _league_game_url(oldest, return_sort="newest")
+        self.assertIn("page=2", url)
+        self.assertIn(f"#game-{oldest.pk}", url)
+
+
+@override_settings(STORAGES=STORAGES_OVERRIDE)
 class LeagueRosterEditTests(TestCase):
     def _league_edit_post_data(self, league, **overrides):
         data = {

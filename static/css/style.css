@@ -405,6 +405,10 @@ h2 {
   gap: 0.85rem;
 }
 
+#league-games {
+  scroll-margin-top: 5rem;
+}
+
 .league-game-card {
   border: 1px solid var(--panel-border);
   border-radius: var(--radius);
@@ -416,6 +420,25 @@ h2 {
 .league-game-card:target {
   border-color: var(--spice-bright);
   box-shadow: 0 0 0 1px var(--spice-bright), 0 8px 28px rgba(212, 132, 44, 0.18);
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1rem;
+  margin-top: 1.25rem;
+}
+
+.pager__status {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.pager__disabled {
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .league-game-card__header {
