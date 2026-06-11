@@ -33,19 +33,24 @@
           Partidas sin liga
         </label>
       </div>
-      <div class="stats-filter-group stats-filter-group--players">
-        <span class="field-label">Líderes por jugador</span>
-        <p class="help">Opcional. Solo afecta la tabla de líderes; el ranking de jugadores no cambia.</p>
+    </div>
+
+    <div class="stats-filter-group stats-filter-group--players">
+      <span class="field-label">Líderes por jugador</span>
+      <p class="help">Opcional. Solo afecta la tabla de líderes; el ranking de jugadores no cambia.</p>
+      {% if filter_players %}
+      <div class="stats-filter-players">
         {% for player in filter_players %}
         <label class="filter-check">
           <input type="checkbox" name="players" value="{{ player.slug }}"
             {% if player.slug in selected_player_slugs %}checked{% endif %}>
           {{ player.name }}
         </label>
-        {% empty %}
-        <p class="help">No hay jugadores en este ámbito.</p>
         {% endfor %}
       </div>
+      {% else %}
+      <p class="help">No hay jugadores en este ámbito.</p>
+      {% endif %}
     </div>
 
     <div class="form-actions">
