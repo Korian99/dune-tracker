@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .hive import decode_playthrough, decode_score, load_players, read_box
+from .names import normalize_bgc_player_name
 
 DUNE_UPRISING_BGG = "397598"
 DUNE_IMPERIUM_BGG = "316554"
@@ -103,7 +104,7 @@ def games_from_bgc_directory(
             if vp is None:
                 continue
             row: dict[str, Any] = {
-                "player": name,
+                "player": normalize_bgc_player_name(name),
                 "leader": "",
                 "victory_points": int(vp),
             }

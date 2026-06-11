@@ -4,6 +4,7 @@ from pathlib import Path
 from django.test import TestCase
 
 from games.integrations.bgc.io import BGC_IMPORT_PREFIX, games_from_bgc_directory
+from games.integrations.bgc.names import normalize_bgc_player_name
 from games.integrations.bgc.hive import load_players
 from games.integrations.bgc.leader_sync import merge_leaders_into_games, parse_import_key_from_notes
 from games.data.bgc_uprising import BGC_UPRISING_GAMES
@@ -24,6 +25,25 @@ class BgcImportTests(TestCase):
         self.assertIsInstance(game["played_on"], date)
         self.assertGreaterEqual(len(game["results"]), 2)
         self.assertLessEqual(max(r["victory_points"] for r in game["results"]), 20)
+
+    def test_normalize_bgc_player_name_aliases(self):
+        self.assertEqual(normalize_bgc_player_name("kori"), "Kori")
+        self.assertEqual(normalize_bgc_player_name("KORI"), "Kori")
+        self.assertEqual(normalize_bgc_player_name("Matute"), "Matías")
+        self.assertEqual(normalize_bgc_player_name("Roger"), "Roger")
+
+    def test_bgc_export_uses_canonical_player_names(self):
+        if not (BACKUP / "playthroughs.hive").exists():
+            self.skipTest("BGC backup extract not present locally")
+        games = games_from_bgc_directory(BACKUP)
+        names = {r["player"] for g in games for r in g["results"]}
+        self.assertNotIn("kori", names)
+        self.assertNotIn("Matute", names)
+        raw_names = {n.casefold() for n in load_players(BACKUP / "players.hive").values()}
+        if "kori" in raw_names:
+            self.assertIn("Kori", names)
+        if "matute" in raw_names:
+            self.assertIn("Matías", names)
 
     def test_players_include_known_names(self):
         if not (BACKUP / "players.hive").exists():

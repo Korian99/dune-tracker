@@ -3,7 +3,7 @@ Historical Dune: Imperium — Uprising games imported from Board Games Companion
 
 Source: Django DB (league liga-n0)
 BGG id: 397598
-Games: 64
+Games: 66
 
 Imported via `python manage.py import_bgc_games`; idempotent by import_key.
 Leaders may be synced from live DB via `python manage.py sync_bgc_leaders`.
@@ -684,6 +684,28 @@ BGC_UPRISING_GAMES = [
             {"player": "Anita", "leader": "", "victory_points": 10, "bgc_placement": 2},
             {"player": "Matías", "leader": "", "victory_points": 9, "bgc_placement": 3},
             {"player": "Nano", "leader": "", "victory_points": 4, "bgc_placement": 4},
+        ],
+    },
+    {
+        "import_key": "bgc-f29cf7e9-d340-4364-aed7-e76d4a42b331",
+        "played_on": date(2026, 5, 2),
+        "duration_minutes": 109,
+        "results": [
+            {"player": "Kori", "leader": "Gaius Helen Mohiam", "victory_points": 10, "bgc_placement": 1},
+            {"player": "Matías", "leader": "", "victory_points": 10, "bgc_placement": 2},
+            {"player": "Nano", "leader": "", "victory_points": 6, "bgc_placement": 3},
+            {"player": "Anita", "leader": "", "victory_points": 6, "bgc_placement": 4},
+        ],
+    },
+    {
+        "import_key": "bgc-5e92c912-a7fa-4113-8a70-528df6e98830",
+        "played_on": date(2026, 5, 2),
+        "duration_minutes": 126,
+        "results": [
+            {"player": "Matías", "leader": "", "victory_points": 10, "bgc_placement": 1},
+            {"player": "Nano", "leader": "", "victory_points": 7, "bgc_placement": 2},
+            {"player": "Pitufo", "leader": "", "victory_points": 6, "bgc_placement": 3},
+            {"player": "Roger", "leader": "", "victory_points": 6, "bgc_placement": 4},
         ],
     },
 ]
