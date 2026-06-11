@@ -24,14 +24,24 @@
     }, SHOW_DELAY_MS);
   }
 
+  function isSlowNavPath(pathname) {
+    const path = (pathname || "").replace(/\/+$/, "") || "/";
+    return path.endsWith("/stats");
+  }
+
   function shouldArmLink(link) {
     if (!(link instanceof HTMLAnchorElement)) return false;
     if (link.dataset.noLoading !== undefined) return false;
     if (link.target && link.target !== "_self") return false;
     if (link.hasAttribute("download")) return false;
-    if (link.getAttribute("href") === "#" || link.getAttribute("href") === "") return false;
+    const href = link.getAttribute("href") || "";
+    if (href === "#" || href === "") return false;
     if (link.origin !== window.location.origin) return false;
-    return link.dataset.loading !== undefined || link.classList.contains("js-show-loading");
+    return (
+      isSlowNavPath(link.pathname) ||
+      link.dataset.loading !== undefined ||
+      link.classList.contains("js-show-loading")
+    );
   }
 
   document.addEventListener("submit", function (event) {

@@ -323,6 +323,59 @@ class TiebreakLogicTests(TestCase):
 
 @override_settings(STORAGES=STORAGES_OVERRIDE)
 class TiebreakRedirectTests(TestCase):
+    def test_save_league_game_without_tie_redirects_to_league_card(self):
+        league = League.objects.create(name="L redirect", slug="redirect-l")
+        game = Game.objects.create(
+            league=league, played_on=date.today(), player_count=2
+        )
+        ana = resolve_player("Ana", league=league)
+        bob = resolve_player("Bob", league=league)
+        r1 = GameResult.objects.create(game=game, player=ana, victory_points=10)
+        r2 = GameResult.objects.create(game=game, player=bob, victory_points=5)
+
+        client = Client()
+        url = reverse("games:edit", kwargs={"pk": game.pk})
+        get = client.get(url)
+        data = {
+            "league": str(league.pk),
+            "played_on": game.played_on.isoformat(),
+            "player_count": "2",
+            "return_sort": "oldest",
+            "duration_hours": "",
+            "duration_minutes_part": "",
+            "rounds": "",
+            "notes": "",
+            "results-TOTAL_FORMS": get.context["formset"].total_form_count(),
+            "results-INITIAL_FORMS": get.context["formset"].initial_form_count(),
+            "results-MIN_NUM_FORMS": "0",
+            "results-MAX_NUM_FORMS": "6",
+            "results-0-id": str(r1.pk),
+            "results-0-player_pick": "Ana",
+            "results-0-leader": "",
+            "results-0-victory_points": "10",
+            "results-0-sardaukar_count": "0",
+            "results-1-id": str(r2.pk),
+            "results-1-player_pick": "Bob",
+            "results-1-leader": "",
+            "results-1-victory_points": "5",
+            "results-1-sardaukar_count": "0",
+            "alliance_emperor": "",
+            "alliance_guild": "",
+            "alliance_bene_gesserit": "",
+            "alliance_fremen": "",
+        }
+        for i in range(2, data["results-TOTAL_FORMS"]):
+            data[f"results-{i}-player_pick"] = ""
+            data[f"results-{i}-leader"] = ""
+            data[f"results-{i}-victory_points"] = ""
+            data[f"results-{i}-sardaukar_count"] = "0"
+
+        response = client.post(url, data)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(f"#game-{game.pk}", response.url)
+        self.assertIn("sort=oldest", response.url)
+        self.assertIn(league.slug, response.url)
+
     def test_save_with_tie_redirects_to_resolve_page(self):
         league = League.objects.create(name="L2", slug="tie-l2")
         game = Game.objects.create(
@@ -372,7 +425,8 @@ class TiebreakRedirectTests(TestCase):
         response = client.post(url, data)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
-            response.url, reverse("games:resolve_tie", kwargs={"pk": game.pk})
+            response.url,
+            reverse("games:resolve_tie", kwargs={"pk": game.pk}) + "?return_sort=newest",
         )
         resolve_url = reverse("games:resolve_tie", kwargs={"pk": game.pk})
         pick = client.post(
@@ -384,6 +438,8 @@ class TiebreakRedirectTests(TestCase):
             },
         )
         self.assertEqual(pick.status_code, 302)
+        self.assertIn(f"#game-{game.pk}", pick.url)
+        self.assertIn(league.slug, pick.url)
         r2.refresh_from_db()
         self.assertTrue(r2.is_winner)
 
@@ -441,7 +497,8 @@ class TiebreakRedirectTests(TestCase):
         response = client.post(url, data)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
-            response.url, reverse("games:resolve_tie", kwargs={"pk": game.pk})
+            response.url,
+            reverse("games:resolve_tie", kwargs={"pk": game.pk}) + "?return_sort=newest",
         )
 
         page = client.get(reverse("games:resolve_tie", kwargs={"pk": game.pk}))

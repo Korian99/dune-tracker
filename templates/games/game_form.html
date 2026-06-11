@@ -16,6 +16,9 @@
 
 <form method="post" class="game-form" id="game-form">
   {% csrf_token %}
+  {% if is_edit and game.league_id or not is_edit and form.league.value %}
+  <input type="hidden" name="return_sort" value="{{ return_sort|default:'newest' }}">
+  {% endif %}
 
   {% if form.non_field_errors %}
     <div class="form-errors">{{ form.non_field_errors }}</div>

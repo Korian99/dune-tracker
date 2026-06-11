@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from .forms import (
@@ -106,12 +107,34 @@ def _alliance_form_for_request(request, formset, game=None, league=None):
     return GameAllianceForm(player_names=names, initial_assignments=initial)
 
 
-def _redirect_after_game_save(game):
-    """Revisit tiebreak when any VP level is tied (incl. imported games)."""
+def _return_sort_from_request(request) -> str:
+    """Games list sort on league detail after save (newest or oldest)."""
+    raw = (request.POST.get("return_sort") or request.GET.get("return_sort") or "newest").strip().lower()
+    return "oldest" if raw == "oldest" else "newest"
+
+
+def _league_game_url(game, *, return_sort: str = "newest") -> str | None:
+    """League detail URL scrolled to a game card, or None if not a league game."""
+    if not game.league_id:
+        return None
+    sort = "oldest" if return_sort == "oldest" else "newest"
+    base = reverse("games:league_detail", kwargs={"slug": game.league.slug})
+    return f"{base}?sort={sort}#game-{game.pk}"
+
+
+def _redirect_after_game_save(game, request):
+    """Revisit tiebreak when any VP level is tied; else league detail or game detail."""
     game.refresh_from_db()
     normalize_tiebreaks_after_save(game)
+    return_sort = _return_sort_from_request(request)
     if has_vp_ties(game):
-        return redirect("games:resolve_tie", pk=game.pk)
+        url = reverse("games:resolve_tie", kwargs={"pk": game.pk})
+        if game.league_id:
+            url += f"?return_sort={return_sort}"
+        return redirect(url)
+    league_url = _league_game_url(game, return_sort=return_sort)
+    if league_url:
+        return redirect(league_url)
     return redirect("games:detail", pk=game.pk)
 
 
@@ -227,7 +250,7 @@ def game_create(request):
             for f in formset.forms:
                 f.league = game.league
             _save_results(formset, alliance_form.cleaned_data)
-            return _redirect_after_game_save(game)
+            return _redirect_after_game_save(game, request)
     else:
         initial = {
             "played_on": date.today(),
@@ -249,6 +272,7 @@ def game_create(request):
             "formset": formset,
             "alliance_form": alliance_form,
             "is_edit": False,
+            "return_sort": _return_sort_from_request(request),
         },
     )
 
@@ -289,7 +313,7 @@ def game_edit(request, pk):
             for f in formset.forms:
                 f.league = game.league
             _save_results(formset, alliance_form.cleaned_data)
-            return _redirect_after_game_save(game)
+            return _redirect_after_game_save(game, request)
     else:
         form = GameForm(instance=game)
         formset = _formset_for_game(game=game)
@@ -300,6 +324,7 @@ def game_edit(request, pk):
             request, formset, game=game, league=game.league
         )
 
+    return_sort = _return_sort_from_request(request) if game.league_id else "newest"
     return render(
         request,
         "games/game_form.html",
@@ -309,6 +334,7 @@ def game_edit(request, pk):
             "alliance_form": alliance_form,
             "is_edit": True,
             "game": game,
+            "return_sort": return_sort,
         },
     )
 
@@ -322,7 +348,11 @@ def game_resolve_tie(request, pk):
         pk=pk,
     )
     groups = vp_tie_groups(game)
+    return_sort = _return_sort_from_request(request)
     if not groups:
+        league_url = _league_game_url(game, return_sort=return_sort)
+        if league_url:
+            return redirect(league_url)
         return redirect("games:detail", pk=game.pk)
 
     if request.method == "POST":
@@ -333,14 +363,19 @@ def game_resolve_tie(request, pk):
             form_errors = str(exc)
         else:
             messages.success(request, "Desempate guardado.")
+            league_url = _league_game_url(game, return_sort=return_sort)
+            if league_url:
+                return redirect(league_url)
             return redirect("games:detail", pk=game.pk)
 
-        return _render_tiebreak_page(request, game, groups, form_errors=form_errors)
+        return _render_tiebreak_page(
+            request, game, groups, form_errors=form_errors, return_sort=return_sort
+        )
 
-    return _render_tiebreak_page(request, game, groups)
+    return _render_tiebreak_page(request, game, groups, return_sort=return_sort)
 
 
-def _render_tiebreak_page(request, game, groups, form_errors=None):
+def _render_tiebreak_page(request, game, groups, form_errors=None, return_sort="newest"):
     tie_groups = []
     for group in groups:
         state = selected_tiebreak_for_group(game, group)
@@ -353,6 +388,9 @@ def _render_tiebreak_page(request, game, groups, form_errors=None):
             for result in group["results"]
         ]
         tie_groups.append({**group, **state, "result_rows": result_rows})
+    skip_url = _league_game_url(game, return_sort=return_sort) or reverse(
+        "games:detail", kwargs={"pk": game.pk}
+    )
     return render(
         request,
         "games/game_tiebreak.html",
@@ -362,6 +400,8 @@ def _render_tiebreak_page(request, game, groups, form_errors=None):
             "needs_resolution": game_needs_tiebreak(game),
             "can_skip": not game_needs_tiebreak(game),
             "form_errors": form_errors,
+            "return_sort": return_sort,
+            "skip_url": skip_url,
         },
     )
 

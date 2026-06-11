@@ -410,6 +410,12 @@ h2 {
   border-radius: var(--radius);
   background: var(--panel);
   padding: 0.85rem 1rem;
+  scroll-margin-top: 5rem;
+}
+
+.league-game-card:target {
+  border-color: var(--spice-bright);
+  box-shadow: 0 0 0 1px var(--spice-bright), 0 8px 28px rgba(212, 132, 44, 0.18);
 }
 
 .league-game-card__header {

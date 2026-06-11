@@ -12,7 +12,7 @@
   <div class="header-actions">
     <a href="{% url 'games:league_sheet_export' slug=league.slug %}" class="btn btn-ghost">Exportar partidas</a>
     <a href="{% url 'games:league_edit' slug=league.slug %}" class="btn btn-ghost">Editar liga</a>
-    <a href="{% url 'games:create' %}?league={{ league.slug }}" class="btn btn-primary">Registrar partida</a>
+    <a href="{% url 'games:create' %}?league={{ league.slug }}&return_sort={{ games_sort }}" class="btn btn-primary">Registrar partida</a>
   </div>
 </div>
 
@@ -122,11 +122,13 @@
     <h2>Partidas de la liga</h2>
     <nav class="sort-toggle" aria-label="Orden de partidas">
       <a href="?sort=newest"
-         class="sort-toggle__btn{% if games_sort == 'newest' %} sort-toggle__btn--active{% endif %}">
+         class="sort-toggle__btn{% if games_sort == 'newest' %} sort-toggle__btn--active{% endif %}"
+         data-no-loading>
         Más recientes
       </a>
       <a href="?sort=oldest"
-         class="sort-toggle__btn{% if games_sort == 'oldest' %} sort-toggle__btn--active{% endif %}">
+         class="sort-toggle__btn{% if games_sort == 'oldest' %} sort-toggle__btn--active{% endif %}"
+         data-no-loading>
         Más antiguas
       </a>
     </nav>
@@ -136,7 +138,7 @@
   <div class="league-games-list">
     {% for entry in game_entries %}
     {% with game=entry.game %}
-    <article class="league-game-card">
+    <article class="league-game-card" id="game-{{ game.pk }}">
       <div class="league-game-card__header">
         <div>
           <p class="league-game-card__title">Fecha N°{{ entry.fecha_number }}</p>
@@ -148,7 +150,7 @@
         </div>
         <div class="row-actions">
           <a href="{% url 'games:detail' pk=game.pk %}">Detalle</a>
-          · <a href="{% url 'games:edit' pk=game.pk %}">Editar</a>
+          · <a href="{% url 'games:edit' pk=game.pk %}?return_sort={{ games_sort }}">Editar</a>
         </div>
       </div>
       {% if entry.league_score_rows %}
@@ -166,7 +168,7 @@
 </section>
 
 <p>
-  <a href="{% url 'games:stats' %}?leagues={{ league.slug }}">Estadísticas de la liga →</a>
+  <a href="{% url 'games:stats' %}?leagues={{ league.slug }}" class="js-show-loading">Estadísticas de la liga →</a>
   · <a href="{% url 'games:league_list' %}">Todas las ligas</a>
 </p>
 {% endblock %}

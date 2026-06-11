@@ -23,6 +23,9 @@
 
 <form method="post" class="tiebreak-form" id="tiebreak-form">
   {% csrf_token %}
+  {% if game.league_id %}
+  <input type="hidden" name="return_sort" value="{{ return_sort|default:'newest' }}">
+  {% endif %}
 
   {% for group in tie_groups %}
   <section class="section tiebreak-section{% if group.is_winner_group %} tiebreak-section--primary{% endif %}" data-vp="{{ group.vp }}">
@@ -92,7 +95,7 @@
   <div class="form-actions">
     <button type="submit" class="btn btn-primary">Confirmar</button>
     {% if can_skip %}
-    <a href="{% url 'games:detail' pk=game.pk %}" class="btn btn-ghost">Dejar como está</a>
+    <a href="{{ skip_url }}" class="btn btn-ghost">Dejar como está</a>
     {% endif %}
   </div>
 </form>
